@@ -258,14 +258,14 @@ export default function ShiftsPage() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Shift Management</h1>
-              <p className="text-gray-600 mt-1">Manage staff schedules and handovers</p>
+              <h1 className="text-2xl sm:text-3xl font-bold">Shift Management</h1>
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage staff schedules and handovers</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Select value={selectedFacility} onValueChange={setSelectedFacility}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="All Facilities" />
                 </SelectTrigger>
                 <SelectContent>
@@ -275,7 +275,7 @@ export default function ShiftsPage() {
                   <SelectItem value="f3">House 3 - Sunshine</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={() => setShowShiftDialog(true)}>
+              <Button onClick={() => setShowShiftDialog(true)} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Shift
               </Button>
@@ -283,28 +283,29 @@ export default function ShiftsPage() {
           </div>
 
           {/* View Toggle and Date Navigation */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <Tabs value={selectedView} onValueChange={(v) => setSelectedView(v as 'day' | 'week')}>
-              <TabsList>
-                <TabsTrigger value="day">Day View</TabsTrigger>
-                <TabsTrigger value="week">Week View</TabsTrigger>
+              <TabsList className="grid w-full sm:w-auto grid-cols-2">
+                <TabsTrigger value="day">Day</TabsTrigger>
+                <TabsTrigger value="week">Week</TabsTrigger>
               </TabsList>
             </Tabs>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setSelectedDate(prev => addDays(prev, -1))}
+                className="h-8 w-8 sm:h-10 sm:w-10"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5 text-gray-500" />
-                <span className="font-medium">
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 hidden sm:block" />
+                <span className="font-medium text-sm sm:text-base text-center sm:text-left">
                   {selectedView === 'day' 
-                    ? format(selectedDate, 'EEEE, MMMM d, yyyy')
-                    : `Week of ${format(startOfWeek(selectedDate), 'MMM d')} - ${format(endOfWeek(selectedDate), 'MMM d, yyyy')}`
+                    ? format(selectedDate, 'EEE, MMM d')
+                    : `${format(startOfWeek(selectedDate), 'MMM d')} - ${format(endOfWeek(selectedDate), 'MMM d')}`
                   }
                 </span>
               </div>
@@ -312,12 +313,15 @@ export default function ShiftsPage() {
                 variant="outline"
                 size="icon"
                 onClick={() => setSelectedDate(prev => addDays(prev, 1))}
+                className="h-8 w-8 sm:h-10 sm:w-10"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setSelectedDate(new Date())}
+                size="sm"
+                className="hidden sm:inline-flex"
               >
                 Today
               </Button>
@@ -393,35 +397,37 @@ export default function ShiftsPage() {
                             <p className="text-gray-500">No morning shifts scheduled</p>
                           ) : (
                             morning.map(shift => (
-                              <div key={shift.id} className="flex items-center justify-between p-4 rounded-lg border">
-                                <div className="flex items-center gap-4">
-                                  <Avatar>
-                                    <AvatarFallback>
-                                      {shift.staffName.split(' ').map(n => n[0]).join('')}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">{shift.staffName}</div>
-                                    <div className="text-sm text-gray-500">{shift.staffRole}</div>
+                              <div key={shift.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border gap-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarFallback>
+                                        {shift.staffName.split(' ').map(n => n[0]).join('')}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="font-medium">{shift.staffName}</div>
+                                      <div className="text-sm text-gray-500">{shift.staffRole}</div>
+                                    </div>
                                   </div>
-                                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 ml-12 sm:ml-0">
+                                    <ArrowRight className="h-4 w-4 text-gray-400 hidden sm:block" />
                                     <Home className="h-4 w-4 text-gray-400" />
                                     <span className="text-sm font-medium">{shift.facilityName}</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3 ml-12 sm:ml-0">
                                   {getStatusBadge(shift.status)}
                                   {shift.status === 'scheduled' && isSameDay(shift.date, new Date()) && (
                                     <Button size="sm" onClick={() => startShift(shift)}>
-                                      <Play className="h-4 w-4 mr-1" />
-                                      Start
+                                      <Play className="h-4 w-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">Start</span>
                                     </Button>
                                   )}
                                   {shift.status === 'active' && (
                                     <Button size="sm" variant="destructive" onClick={() => endShift(shift)}>
-                                      <Pause className="h-4 w-4 mr-1" />
-                                      End
+                                      <Pause className="h-4 w-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">End</span>
                                     </Button>
                                   )}
                                 </div>
@@ -446,35 +452,37 @@ export default function ShiftsPage() {
                             <p className="text-gray-500">No afternoon shifts scheduled</p>
                           ) : (
                             afternoon.map(shift => (
-                              <div key={shift.id} className="flex items-center justify-between p-4 rounded-lg border">
-                                <div className="flex items-center gap-4">
-                                  <Avatar>
-                                    <AvatarFallback>
-                                      {shift.staffName.split(' ').map(n => n[0]).join('')}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">{shift.staffName}</div>
-                                    <div className="text-sm text-gray-500">{shift.staffRole}</div>
+                              <div key={shift.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border gap-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarFallback>
+                                        {shift.staffName.split(' ').map(n => n[0]).join('')}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="font-medium">{shift.staffName}</div>
+                                      <div className="text-sm text-gray-500">{shift.staffRole}</div>
+                                    </div>
                                   </div>
-                                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 ml-12 sm:ml-0">
+                                    <ArrowRight className="h-4 w-4 text-gray-400 hidden sm:block" />
                                     <Home className="h-4 w-4 text-gray-400" />
                                     <span className="text-sm font-medium">{shift.facilityName}</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3 ml-12 sm:ml-0">
                                   {getStatusBadge(shift.status)}
                                   {shift.status === 'scheduled' && isSameDay(shift.date, new Date()) && (
                                     <Button size="sm" onClick={() => startShift(shift)}>
-                                      <Play className="h-4 w-4 mr-1" />
-                                      Start
+                                      <Play className="h-4 w-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">Start</span>
                                     </Button>
                                   )}
                                   {shift.status === 'active' && (
                                     <Button size="sm" variant="destructive" onClick={() => endShift(shift)}>
-                                      <Pause className="h-4 w-4 mr-1" />
-                                      End
+                                      <Pause className="h-4 w-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">End</span>
                                     </Button>
                                   )}
                                 </div>
@@ -499,35 +507,37 @@ export default function ShiftsPage() {
                             <p className="text-gray-500">No night shifts scheduled</p>
                           ) : (
                             night.map(shift => (
-                              <div key={shift.id} className="flex items-center justify-between p-4 rounded-lg border">
-                                <div className="flex items-center gap-4">
-                                  <Avatar>
-                                    <AvatarFallback>
-                                      {shift.staffName.split(' ').map(n => n[0]).join('')}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">{shift.staffName}</div>
-                                    <div className="text-sm text-gray-500">{shift.staffRole}</div>
+                              <div key={shift.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border gap-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarFallback>
+                                        {shift.staffName.split(' ').map(n => n[0]).join('')}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="font-medium">{shift.staffName}</div>
+                                      <div className="text-sm text-gray-500">{shift.staffRole}</div>
+                                    </div>
                                   </div>
-                                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 ml-12 sm:ml-0">
+                                    <ArrowRight className="h-4 w-4 text-gray-400 hidden sm:block" />
                                     <Home className="h-4 w-4 text-gray-400" />
                                     <span className="text-sm font-medium">{shift.facilityName}</span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3 ml-12 sm:ml-0">
                                   {getStatusBadge(shift.status)}
                                   {shift.status === 'scheduled' && isSameDay(shift.date, new Date()) && (
                                     <Button size="sm" onClick={() => startShift(shift)}>
-                                      <Play className="h-4 w-4 mr-1" />
-                                      Start
+                                      <Play className="h-4 w-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">Start</span>
                                     </Button>
                                   )}
                                   {shift.status === 'active' && (
                                     <Button size="sm" variant="destructive" onClick={() => endShift(shift)}>
-                                      <Pause className="h-4 w-4 mr-1" />
-                                      End
+                                      <Pause className="h-4 w-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">End</span>
                                     </Button>
                                   )}
                                 </div>
