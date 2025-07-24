@@ -1,6 +1,18 @@
 {
   "name": "carescribe-demo",
   "version": "0.1.0",
+  "description": "AI-powered NDIS incident reporting platform that transforms disability support documentation with voice-powered reporting",
+  "keywords": ["ndis", "disability-support", "incident-reporting", "ai", "voice-to-text", "healthcare", "australia"],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/[your-username]/carescribe-demo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/[your-username]/carescribe-demo/issues"
+  },
+  "homepage": "https://github.com/[your-username]/carescribe-demo#readme",
   "private": true,
   "scripts": {
     "dev": "next dev",

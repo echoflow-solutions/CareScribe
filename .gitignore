@@ -64,3 +64,8 @@ cypress/screenshots/
 # misc
 *.pem
 .turbo
+
+# debug and test files
+debug-*.ts
+test_*.sql
+verify_*.sql

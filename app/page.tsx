@@ -1232,7 +1232,7 @@ export default function Home() {
           </div>
           
           <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-            <p>© 2025 CareScribe. All rights reserved. Built with ❤️ for NDIS providers.</p>
+            <p>© 2025 CareScribe. All rights reserved. Built by Bernard Adjei-Yeboah & Akua Boateng with ❤️ for NDIS providers.</p>
           </div>
         </div>
       </footer>
