@@ -446,12 +446,12 @@ export default function Home() {
         style={{ opacity: headerOpacity }}
         className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b"
       >
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-14 h-14 text-white" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 md:w-20 sm:h-16 md:h-20 bg-primary rounded-xl sm:rounded-2xl flex items-center justify-center">
+              <Sparkles className="w-8 h-8 sm:w-10 md:w-14 sm:h-10 md:h-14 text-white" />
             </div>
-            <span className="font-bold text-6xl">CareScribe</span>
+            <span className="font-bold text-2xl sm:text-4xl md:text-6xl">CareScribe</span>
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -515,22 +515,22 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="text-center mb-8"
           >
-            <div className="inline-flex items-center gap-6 mb-3">
+            <div className="inline-flex items-center gap-3 sm:gap-4 md:gap-6 mb-3">
               <motion.div 
-                className="w-24 h-24 bg-primary rounded-2xl flex items-center justify-center shadow-lg"
+                className="w-16 h-16 sm:w-20 md:w-24 sm:h-20 md:h-24 bg-primary rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg"
                 animate={{ rotate: [0, 5, -5, 0] }}
                 transition={{ duration: 4, repeat: Infinity, repeatDelay: 2 }}
               >
-                <Sparkles className="w-16 h-16 text-white" />
+                <Sparkles className="w-10 h-10 sm:w-12 md:w-16 sm:h-12 md:h-16 text-white" />
               </motion.div>
-              <h1 className="text-7xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 CareScribe
               </h1>
             </div>
             <div className="flex justify-center -mt-2">
-              <Badge className="px-8 py-3 text-lg" variant="secondary">
-                <Star className="mr-3 h-6 w-6" />
-                The Future of NDIS Incident Reporting
+              <Badge className="px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base md:text-lg" variant="secondary">
+                <Star className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+                <span className="whitespace-nowrap">The Future of NDIS Incident Reporting</span>
               </Badge>
             </div>
           </motion.div>
@@ -541,12 +541,12 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-center"
           >
-            <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl mb-6">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-4 sm:mb-6">
               Transform Disability Support
-              <span className="block text-primary mt-2">With AI-Powered Voice</span>
+              <span className="block text-primary mt-1 sm:mt-2">With AI-Powered Voice</span>
             </h2>
             
-            <p className="text-xl leading-8 text-gray-600 max-w-3xl mx-auto mb-8">
+            <p className="text-base sm:text-lg md:text-xl leading-7 sm:leading-8 text-gray-600 max-w-3xl mx-auto mb-6 sm:mb-8 px-4 sm:px-0">
               Say goodbye to paperwork. CareScribe uses advanced AI to convert 
               spoken words into comprehensive, compliant incident reports in minutes.
             </p>
