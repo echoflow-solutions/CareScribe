@@ -51,7 +51,7 @@ CareScribe is a comprehensive AI-powered incident reporting system designed spec
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/carescribe-demo.git
+   git clone https://github.com/ghazzie/CareScribe_demo.git
    cd carescribe-demo
    ```
 
@@ -497,7 +497,7 @@ This project is licensed under the MIT License - see [LICENSE](./LICENSE) for de
 > **Note**: The following links are placeholders for demonstration purposes:
 
 - **Documentation**: [docs.carescribe.com](https://docs.carescribe.com) *(placeholder)*
-- **Issues**: [GitHub Issues](https://github.com/[your-username]/carescribe-demo/issues)
+- **Issues**: [GitHub Issues](https://github.com/ghazzie/CareScribe_demo/issues)
 - **Email**: support@carescribe.com *(placeholder)*
 - **Community**: [Discord Server](https://discord.gg/carescribe) *(placeholder)*
 
