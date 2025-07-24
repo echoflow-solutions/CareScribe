@@ -90,17 +90,19 @@ CareScribe is a comprehensive AI-powered incident reporting system designed spec
 6. **Open the application**
    Visit [http://localhost:3000](http://localhost:3000)
 
-## 🔑 Demo Accounts
+## 🔑 Demo Access
 
-Click any demo account on the login page (no password required):
+The application includes demo accounts for different user roles. On the login page, you can select from 5 different role types to experience the platform from various perspectives:
 
-| Role | Email | Access Level | Key Features |
-|------|--------|--------------|-------------|
-| **Support Worker** | sarah.johnson@sunshinesupport.com.au | Level 4 | Voice reporting, shift management, participant care |
-| **Team Leader** | tom.anderson@sunshinesupport.com.au | Level 3 | Team oversight, shift approval, performance metrics |
-| **Clinical Manager** | dr.kim@sunshinesupport.com.au | Level 2 | Behavioral analytics, clinical interventions, compliance |
-| **Area Manager** | lisa.park@sunshinesupport.com.au | Level 2 | Multi-facility management, resource allocation |
-| **CEO** | ceo@sunshinesupport.com.au | Level 1 | Executive dashboards, strategic insights |
+| Role | Access Level | Key Features |
+|------|--------------|-------------|
+| **Support Worker** | Level 4 | Voice reporting, shift management, participant care |
+| **Team Leader** | Level 3 | Team oversight, shift approval, performance metrics |
+| **Clinical Manager** | Level 2 | Behavioral analytics, clinical interventions, compliance |
+| **Area Manager** | Level 2 | Multi-facility management, resource allocation |
+| **Executive** | Level 1 | Executive dashboards, strategic insights |
+
+> **Note**: Demo accounts are pre-configured and don't require passwords. Simply click on any role to log in and explore the features.
 
 ## 🏗️ Architecture
 
