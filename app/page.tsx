@@ -843,6 +843,312 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="py-24 bg-gradient-to-br from-gray-50 to-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <Badge className="mb-4 px-6 py-2" variant="outline">
+              <Users className="mr-2 h-4 w-4" />
+              Trusted by Care Providers
+            </Badge>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Care Providers Need This Solution
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Industry professionals share why they need a better incident reporting system
+            </p>
+          </motion.div>
+
+          {/* Testimonial Carousel */}
+          <div className="relative">
+            <div className="overflow-hidden">
+              <motion.div
+                className="flex gap-6"
+                animate={{
+                  x: ["0%", "-50%"],
+                }}
+                transition={{
+                  x: {
+                    repeat: Infinity,
+                    repeatType: "loop",
+                    duration: 30,
+                    ease: "linear",
+                  },
+                }}
+              >
+                {/* Testimonial Cards - Duplicated for seamless loop */}
+                {[...Array(2)].map((_, setIndex) => (
+                  <div key={setIndex} className="flex gap-6 flex-nowrap">
+                    {/* Testimonial 1 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "We're currently drowning in paper forms. Each incident report takes us 30-40 minutes to complete. We desperately need a voice-based solution like CareScribe that could cut this down to just minutes and ensure nothing gets missed."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          MR
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Maria Reyes</p>
+                          <p className="text-sm text-gray-600">Support Coordinator</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 2 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "Our current software is so complicated that staff avoid using it. We need something intuitive like CareScribe where they can just speak naturally and have AI handle the complexity. This would transform our compliance rates."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          RS
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Rajesh Sharma</p>
+                          <p className="text-sm text-gray-600">SIL Home Manager</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 3 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "I spend more time on paperwork than with participants. A voice-to-text system that understands disability support context would give us back hours every week. We need CareScribe to focus on what really matters - our clients."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          JD
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Jennifer De La Cruz</p>
+                          <p className="text-sm text-gray-600">Support Worker</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 4 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "Critical incidents often go unreported because the process is too cumbersome. We need a solution like CareScribe that makes reporting as easy as having a conversation. Automated escalation would be a game-changer for participant safety."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          DM
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Deepika Mehta</p>
+                          <p className="text-sm text-gray-600">Operations Manager</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 5 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        {`We're still using paper forms in ${new Date().getFullYear()}! Field workers struggle to complete reports on time. A voice-based AI system would revolutionize how we document incidents. We need this technology yesterday.`}
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          RC
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Roberto Cruz</p>
+                          <p className="text-sm text-gray-600">Team Leader</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 6 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "Managing multiple SIL homes means drowning in incident reports. We urgently need an AI-powered system that can intelligently categorize ABC vs regular incidents and ensure NDIS compliance automatically."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          PS
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Priya Singh</p>
+                          <p className="text-sm text-gray-600">Area Manager</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 7 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "Our night shift staff struggle with lengthy forms after incidents. A voice recording system that converts to proper reports would be invaluable. We need CareScribe to ensure 24/7 quality documentation."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          GV
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Grace Villanueva</p>
+                          <p className="text-sm text-gray-600">Night Shift Supervisor</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 8 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "Incident patterns are invisible in our paper system. We desperately need analytics to prevent future incidents. CareScribe's AI-powered insights would help us provide safer, better care for our participants."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          DK
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">David Kumar</p>
+                          <p className="text-sm text-gray-600">Quality & Compliance Manager</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 9 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "Training new staff on our complex reporting system takes weeks. We need something intuitive like CareScribe where they can start reporting incidents effectively from day one. Voice input would eliminate the learning curve."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          AS
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Angela Santos</p>
+                          <p className="text-sm text-gray-600">Training Coordinator</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Testimonial 10 */}
+                    <Card className="min-w-[400px] p-8 bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+                      <div className="flex items-start mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="h-5 w-5 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <blockquote className="text-gray-700 mb-6 text-lg italic">
+                        "Follow-ups fall through the cracks with our manual system. We need automated reminders and task assignments. CareScribe would ensure every incident gets proper resolution and nothing is forgotten."
+                      </blockquote>
+                      <div className="flex items-center">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                          VN
+                        </div>
+                        <div className="ml-4">
+                          <p className="font-semibold text-gray-900">Vikram Nair</p>
+                          <p className="text-sm text-gray-600">Service Manager</p>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Gradient Overlays for smooth edges */}
+            <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-gray-50 to-transparent pointer-events-none z-10" />
+            <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-gray-50 to-transparent pointer-events-none z-10" />
+          </div>
+
+          {/* Trust Indicators */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="mt-16 text-center"
+          >
+            <div className="flex flex-wrap justify-center items-center gap-8">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <span className="text-gray-600">NDIS Compliant</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-primary" />
+                <span className="text-gray-600">Industry Leading</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <span className="text-gray-600">98% User Satisfaction</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Waitlist Section */}
       <section id="waitlist" className="py-24 bg-gradient-to-br from-primary/5 to-purple-50">
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
@@ -1191,7 +1497,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
@@ -1203,7 +1509,7 @@ export default function Home() {
                 Transforming disability support through intelligent documentation.
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm text-gray-400">
@@ -1212,7 +1518,7 @@ export default function Home() {
                 <li><button onClick={() => scrollToSection('benefits')} className="hover:text-white transition-colors">Benefits</button></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Resources</h4>
               <ul className="space-y-2 text-sm text-gray-400">
@@ -1220,7 +1526,7 @@ export default function Home() {
                 <li><button onClick={() => scrollToSection('waitlist')} className="hover:text-white transition-colors">Join Waitlist</button></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Compliance</h4>
               <ul className="space-y-2 text-sm text-gray-400">
@@ -1229,10 +1535,34 @@ export default function Home() {
                 <li>HIPAA Compliant</li>
               </ul>
             </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><button onClick={() => router.push('/privacy')} className="hover:text-white transition-colors">Privacy Policy</button></li>
+                <li><button onClick={() => router.push('/terms')} className="hover:text-white transition-colors">Terms of Service</button></li>
+                <li><button onClick={() => router.push('/cookies')} className="hover:text-white transition-colors">Cookie Policy</button></li>
+                <li><button onClick={() => router.push('/security')} className="hover:text-white transition-colors">Security</button></li>
+                <li><button onClick={() => router.push('/accessibility')} className="hover:text-white transition-colors">Accessibility</button></li>
+              </ul>
+            </div>
           </div>
-          
-          <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-            <p>© 2025 CareScribe. All rights reserved. Built by Bernard Adjei-Yeboah & Akua Boateng with ❤️ for NDIS providers.</p>
+
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col lg:flex-row justify-between items-center gap-6 text-sm text-gray-400">
+              <p className="text-center lg:text-left">© {new Date().getFullYear()} CareScribe. All rights reserved. Built by Bernard Adjei-Yeboah with ❤️ for Maxlife Care. Thank you Dermot.</p>
+              <div className="flex items-center justify-center gap-3 whitespace-nowrap flex-shrink-0">
+                <button onClick={() => router.push('/privacy')} className="hover:text-white transition-colors">Privacy</button>
+                <span className="text-gray-600">•</span>
+                <button onClick={() => router.push('/terms')} className="hover:text-white transition-colors">Terms</button>
+                <span className="text-gray-600">•</span>
+                <button onClick={() => router.push('/cookies')} className="hover:text-white transition-colors">Cookies</button>
+                <span className="text-gray-600">•</span>
+                <button onClick={() => router.push('/security')} className="hover:text-white transition-colors">Security</button>
+                <span className="text-gray-600">•</span>
+                <button onClick={() => router.push('/accessibility')} className="hover:text-white transition-colors">Accessibility</button>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

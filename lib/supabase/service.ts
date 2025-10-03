@@ -16,25 +16,26 @@ export class SupabaseService {
   // Organization methods
   static async getOrganization(): Promise<Organization | null> {
     if (!this.isAvailable()) return null
-    
+
     const { data, error } = await supabase!
       .from('organizations')
       .select('*')
-      .single()
-    
+      .limit(1)
+
     if (error) {
       console.error('Error fetching organization:', error)
       return null
     }
-    
-    return data ? {
-      id: data.id,
-      name: data.name,
-      ndisNumber: data.ndis_number,
-      facilities: data.facilities_count,
-      primaryEmail: data.primary_email,
-      timezone: data.timezone,
-      createdAt: data.created_at
+
+    const org = data?.[0]
+    return org ? {
+      id: org.id,
+      name: org.name,
+      ndisNumber: org.ndis_number,
+      facilities: org.facilities_count,
+      primaryEmail: org.primary_email,
+      timezone: org.timezone,
+      createdAt: org.created_at
     } : null
   }
 
@@ -114,7 +115,7 @@ export class SupabaseService {
   // Participant methods
   static async getParticipants(facilityId?: string): Promise<Participant[]> {
     if (!this.isAvailable()) return []
-    
+
     let query = supabase!
       .from('participants')
       .select(`
@@ -123,11 +124,13 @@ export class SupabaseService {
         behavior_patterns:participant_behavior_patterns(*),
         medications:participant_medications(*)
       `)
-    
-    if (facilityId) {
+
+    // Only filter by facility_id if it's a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (facilityId && uuidRegex.test(facilityId)) {
       query = query.eq('facility_id', facilityId)
     }
-    
+
     const { data, error } = await query.order('name')
     
     if (error) {
@@ -142,13 +145,14 @@ export class SupabaseService {
       riskLevel: p.risk_level as 'low' | 'medium' | 'high',
       currentStatus: p.current_status as any,
       location: p.current_location || '',
-      medications: p.medications.map((m: any) => ({
+      medications: p.medications?.map((m: any) => ({
         id: m.id,
         name: m.name,
         dosage: m.dosage || '',
         time: m.time || '',
         type: m.type as 'regular' | 'prn'
-      })),
+      })) || [],
+      conditions: p.conditions || [],
       behaviorPatterns: p.behavior_patterns.map((bp: any) => ({
         id: bp.id,
         trigger: bp.trigger || '',
@@ -173,7 +177,12 @@ export class SupabaseService {
         strategies: [],
         preferences: [],
         emergencyContacts: []
-      }
+      },
+      emergencyContact: p.emergency_contact_name ? {
+        name: p.emergency_contact_name,
+        role: p.emergency_contact_relationship || '',
+        phone: p.emergency_contact_phone || ''
+      } : undefined
     }))
   }
 
@@ -196,7 +205,7 @@ export class SupabaseService {
   // Incident methods
   static async getIncidents(facilityId?: string): Promise<Incident[]> {
     if (!this.isAvailable()) return []
-    
+
     let query = supabase!
       .from('incidents')
       .select(`
@@ -204,11 +213,13 @@ export class SupabaseService {
         participant:participants(name),
         staff:users(name)
       `)
-    
-    if (facilityId) {
+
+    // Only filter by facility_id if it's a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (facilityId && uuidRegex.test(facilityId)) {
       query = query.eq('facility_id', facilityId)
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false })
     
     if (error) {
@@ -271,23 +282,25 @@ export class SupabaseService {
   // Alert methods
   static async getAlerts(facilityId?: string): Promise<Alert[]> {
     if (!this.isAvailable()) return []
-    
+
     let query = supabase!
       .from('alerts')
       .select('*')
       .eq('acknowledged', false)
-    
-    if (facilityId) {
+
+    // Only filter by facility_id if it's a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (facilityId && uuidRegex.test(facilityId)) {
       query = query.eq('facility_id', facilityId)
     }
-    
+
     const { data, error } = await query.order('created_at', { ascending: false })
-    
+
     if (error) {
       console.error('Error fetching alerts:', error)
       return []
     }
-    
+
     return data.map(a => ({
       id: a.id,
       type: a.type as any,

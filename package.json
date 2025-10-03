@@ -2,7 +2,15 @@
   "name": "carescribe-demo",
   "version": "0.1.0",
   "description": "AI-powered NDIS incident reporting platform that transforms disability support documentation with voice-powered reporting",
-  "keywords": ["ndis", "disability-support", "incident-reporting", "ai", "voice-to-text", "healthcare", "australia"],
+  "keywords": [
+    "ndis",
+    "disability-support",
+    "incident-reporting",
+    "ai",
+    "voice-to-text",
+    "healthcare",
+    "australia"
+  ],
   "author": "Bernard Adjei-Yeboah & Akua Boateng",
   "license": "MIT",
   "repository": {
@@ -16,6 +24,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:https": "node server.js",
+    "setup:https": "./scripts/setup-https.sh",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -43,6 +53,7 @@
     "react-day-picker": "^9.8.0",
     "react-dom": "19.1.0",
     "recharts": "^2.15.4",
+    "sonner": "^2.0.6",
     "zustand": "^5.0.6"
   },
   "devDependencies": {

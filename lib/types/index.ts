@@ -36,8 +36,10 @@ export interface Participant {
   currentStatus: 'calm' | 'anxious' | 'agitated' | 'happy' | 'resting'
   location: string
   medications: Medication[]
+  conditions?: string[]
   behaviorPatterns: BehaviorPattern[]
   supportPlan: SupportPlan
+  emergencyContact?: EmergencyContact
 }
 
 export interface Medication {
@@ -71,6 +73,8 @@ export interface Contact {
   phone: string
   email?: string
 }
+
+export type EmergencyContact = Contact
 
 // Incident and Report Types
 export interface Incident {

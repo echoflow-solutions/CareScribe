@@ -12,7 +12,7 @@ import {
   Home, FileText, Clock, Pill, AlertCircle, BarChart3,
   Shield, Users, Settings, LogOut, ChevronLeft, ChevronRight,
   Mic, Menu, X, Sparkles, Building, UserCheck, Bell,
-  TrendingUp, Calendar, MessageSquare, HelpCircle
+  TrendingUp, Calendar, MessageSquare, HelpCircle, Play
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -49,6 +49,12 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
     // Support Worker specific items
     if (currentUser.role.level === 4) {
       return [
+        {
+          title: 'Shift Start',
+          icon: Play,
+          href: '/shift-start',
+          badge: !currentShift ? 'Start' : null,
+        },
         ...baseItems,
         {
           title: 'Shifts',
@@ -153,8 +159,8 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
   const navigationItems = getNavigationItems()
 
   const handleLogout = () => {
-    setCurrentUser(null)
-    setCurrentShift(null)
+    // Clear all persisted state
+    useStore.getState().clearState()
     router.push('/login')
   }
 

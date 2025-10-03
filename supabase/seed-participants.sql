@@ -130,7 +130,7 @@ INSERT INTO alerts (facility_id, type, severity, message, participant_id, acknow
 INSERT INTO incidents (participant_id, facility_id, staff_id, type, severity, location, description, antecedent, behavior, consequence, report_type, status, created_at) VALUES
 -- James Mitchell incidents (showing pattern)
 ('850e8400-e29b-41d4-a716-446655440001', '650e8400-e29b-41d4-a716-446655440003', 
-    (SELECT id FROM users WHERE email = 'sarah.johnson@sunshinesupport.com.au'),
+    (SELECT id FROM users WHERE email = 'bernard.adjei@maxlifecare.com.au'),
     'behavioral', 'medium', 'Living Room',
     'Sensory overload due to construction noise',
     'Construction work started outside without warning',
@@ -139,7 +139,7 @@ INSERT INTO incidents (participant_id, facility_id, staff_id, type, severity, lo
     'abc', 'closed', NOW() - INTERVAL '7 days'),
     
 ('850e8400-e29b-41d4-a716-446655440001', '650e8400-e29b-41d4-a716-446655440003',
-    (SELECT id FROM users WHERE email = 'sarah.johnson@sunshinesupport.com.au'),
+    (SELECT id FROM users WHERE email = 'bernard.adjei@maxlifecare.com.au'),
     'behavioral', 'low', 'Dining Room',
     'Anxiety during lunch due to unexpected visitor',
     'Unfamiliar maintenance worker entered during meal',
@@ -148,7 +148,7 @@ INSERT INTO incidents (participant_id, facility_id, staff_id, type, severity, lo
     'abc', 'closed', NOW() - INTERVAL '14 days'),
     
 ('850e8400-e29b-41d4-a716-446655440001', '650e8400-e29b-41d4-a716-446655440003',
-    (SELECT id FROM users WHERE email = 'sarah.johnson@sunshinesupport.com.au'),
+    (SELECT id FROM users WHERE email = 'bernard.adjei@maxlifecare.com.au'),
     'behavioral', 'high', 'Common Room',
     'Major sensory overload incident',
     'Fire alarm testing without prior notice',
@@ -158,12 +158,12 @@ INSERT INTO incidents (participant_id, facility_id, staff_id, type, severity, lo
 
 -- Insert recent shift data
 INSERT INTO shifts (staff_id, facility_id, start_time, end_time, status) VALUES
-((SELECT id FROM users WHERE email = 'sarah.johnson@sunshinesupport.com.au'), 
+((SELECT id FROM users WHERE email = 'bernard.adjei@maxlifecare.com.au'), 
     '650e8400-e29b-41d4-a716-446655440003',
     NOW() - INTERVAL '8 hours',
     NOW(),
     'completed'),
-((SELECT id FROM users WHERE email = 'sarah.johnson@sunshinesupport.com.au'),
+((SELECT id FROM users WHERE email = 'bernard.adjei@maxlifecare.com.au'),
     '650e8400-e29b-41d4-a716-446655440003',
     NOW(),
     NOW() + INTERVAL '8 hours',

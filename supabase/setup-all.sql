@@ -294,7 +294,7 @@ INSERT INTO facilities (id, organization_id, name, code, address, capacity) VALU
 -- Insert Key Demo Users
 INSERT INTO users (email, name, role_id, facility_id, phone, status) VALUES
 -- Demo accounts
-('sarah.johnson@sunshinesupport.com.au', 'Sarah Johnson', '550e8400-e29b-41d4-a716-446655440004', '650e8400-e29b-41d4-a716-446655440003', '0400444001', 'active'),
+('bernard.adjei@maxlifecare.com.au', 'Bernard Adjei', '550e8400-e29b-41d4-a716-446655440004', '650e8400-e29b-41d4-a716-446655440003', '0400444001', 'active'),
 ('tom.anderson@sunshinesupport.com.au', 'Tom Anderson', '550e8400-e29b-41d4-a716-446655440003', '650e8400-e29b-41d4-a716-446655440003', '0400333005', 'active'),
 ('dr.kim@sunshinesupport.com.au', 'Dr. Sarah Kim', '550e8400-e29b-41d4-a716-446655440005', '650e8400-e29b-41d4-a716-446655440012', '0400222005', 'active'),
 ('lisa.park@sunshinesupport.com.au', 'Lisa Park', '550e8400-e29b-41d4-a716-446655440002', '650e8400-e29b-41d4-a716-446655440012', '0400222001', 'active'),
@@ -347,7 +347,7 @@ DO $$
 BEGIN
   RAISE NOTICE 'CareScribe database setup completed successfully!';
   RAISE NOTICE 'Demo accounts created:';
-  RAISE NOTICE '- Support Worker: sarah.johnson@sunshinesupport.com.au';
+  RAISE NOTICE '- Support Worker: bernard.adjei@maxlifecare.com.au';
   RAISE NOTICE '- Team Leader: tom.anderson@sunshinesupport.com.au';
   RAISE NOTICE '- Clinical Manager: dr.kim@sunshinesupport.com.au';
   RAISE NOTICE '- Area Manager: lisa.park@sunshinesupport.com.au';

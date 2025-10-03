@@ -54,7 +54,7 @@ interface HandoverNote {
 const generateShifts = (): Shift[] => {
   const shifts: Shift[] = []
   const staff = [
-    { id: '1', name: 'Sarah Johnson', role: 'Support Worker' },
+    { id: '1', name: 'Bernard Adjei', role: 'Support Worker' },
     { id: '2', name: 'Tom Anderson', role: 'Team Leader' },
     { id: '3', name: 'Emily Chen', role: 'Support Worker' },
     { id: '4', name: 'Mark Williams', role: 'Support Worker' },
@@ -707,7 +707,7 @@ export default function ShiftsPage() {
                     <SelectValue placeholder="Select staff member" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="s1">Sarah Johnson</SelectItem>
+                    <SelectItem value="s1">Bernard Adjei</SelectItem>
                     <SelectItem value="s2">Tom Anderson</SelectItem>
                     <SelectItem value="s3">Emily Chen</SelectItem>
                     <SelectItem value="s4">Mark Williams</SelectItem>

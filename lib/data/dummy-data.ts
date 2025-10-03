@@ -35,16 +35,16 @@ export const roles: Role[] = [
 export const users: User[] = [
   {
     id: '1',
-    email: 'sarah.johnson@sunshinesupport.com.au',
-    name: 'Sarah Johnson',
+    email: 'bernard.adjei@maxlifecare.com.au',
+    name: 'Bernard Adjei',
     role: roles[3], // Support Worker
     facilityId: 'house-3',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bernard',
     createdAt: '2024-01-15T10:00:00Z'
   },
   {
     id: '2',
-    email: 'tom.anderson@sunshinesupport.com.au',
+    email: 'tom.anderson@maxlifecare.com.au',
     name: 'Tom Anderson',
     role: roles[2], // Team Leader
     facilityId: 'house-3',
@@ -53,7 +53,7 @@ export const users: User[] = [
   },
   {
     id: '3',
-    email: 'dr.kim@sunshinesupport.com.au',
+    email: 'dr.kim@maxlifecare.com.au',
     name: 'Dr. Sarah Kim',
     role: roles[1], // Clinical Manager (Area Manager level)
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=DrKim',
@@ -61,7 +61,7 @@ export const users: User[] = [
   },
   {
     id: '4',
-    email: 'lisa.park@sunshinesupport.com.au',
+    email: 'lisa.park@maxlifecare.com.au',
     name: 'Lisa Park',
     role: roles[1], // Area Manager
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
@@ -72,10 +72,10 @@ export const users: User[] = [
 // Demo Organization
 export const organization: Organization = {
   id: '1',
-  name: 'Sunshine Support Services',
+  name: 'Maxlife Care',
   ndisNumber: '4-123-4567-8',
   facilities: 5,
-  primaryEmail: 'admin@sunshinesupport.com.au',
+  primaryEmail: 'admin@maxlifecare.com.au',
   timezone: 'Australia/Sydney',
   createdAt: '2020-01-01T00:00:00Z'
 }
@@ -103,7 +103,35 @@ export const participants: Participant[] = [
         dosage: '1mg',
         time: 'PRN',
         type: 'prn'
+      },
+      {
+        id: '3',
+        name: 'Sertraline',
+        dosage: '100mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '4',
+        name: 'Quetiapine',
+        dosage: '25mg',
+        time: '22:00',
+        type: 'regular'
+      },
+      {
+        id: '5',
+        name: 'Omega-3',
+        dosage: '1000mg',
+        time: '12:00',
+        type: 'regular'
       }
+    ],
+    conditions: [
+      'Bipolar Disorder',
+      'Generalized Anxiety Disorder',
+      'Insomnia',
+      'Mild Intellectual Disability',
+      'ADHD'
     ],
     behaviorPatterns: [
       {
@@ -138,12 +166,47 @@ export const participants: Participant[] = [
     location: 'Garden',
     medications: [
       {
+        id: '1',
+        name: 'Escitalopram',
+        dosage: '10mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '2',
+        name: 'Gabapentin',
+        dosage: '300mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
         id: '3',
         name: 'Vitamin D',
         dosage: '1000IU',
         time: '09:00',
         type: 'regular'
+      },
+      {
+        id: '4',
+        name: 'Calcium Carbonate',
+        dosage: '600mg',
+        time: '12:00',
+        type: 'regular'
+      },
+      {
+        id: '5',
+        name: 'Ibuprofen',
+        dosage: '400mg',
+        time: 'PRN',
+        type: 'prn'
       }
+    ],
+    conditions: [
+      'Depression',
+      'Neuropathic Pain',
+      'Osteoporosis',
+      'Vitamin D Deficiency',
+      'Autism Spectrum Disorder'
     ],
     behaviorPatterns: [],
     supportPlan: {
@@ -169,12 +232,47 @@ export const participants: Participant[] = [
     location: 'Bedroom',
     medications: [
       {
-        id: '4',
+        id: '1',
         name: 'Sertraline',
         dosage: '50mg',
         time: '08:00',
         type: 'regular'
+      },
+      {
+        id: '2',
+        name: 'Propranolol',
+        dosage: '20mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '3',
+        name: 'Propranolol',
+        dosage: '20mg',
+        time: '14:00',
+        type: 'regular'
+      },
+      {
+        id: '4',
+        name: 'Melatonin',
+        dosage: '5mg',
+        time: '21:00',
+        type: 'regular'
+      },
+      {
+        id: '5',
+        name: 'Diazepam',
+        dosage: '5mg',
+        time: 'PRN',
+        type: 'prn'
       }
+    ],
+    conditions: [
+      'Anxiety Disorder',
+      'Autism Spectrum Disorder',
+      'Hypertension',
+      'Insomnia',
+      'Sensory Processing Sensitivity'
     ],
     behaviorPatterns: [
       {
@@ -206,7 +304,42 @@ export const participants: Participant[] = [
     riskLevel: 'low',
     currentStatus: 'happy',
     location: 'Kitchen',
-    medications: [],
+    medications: [
+      {
+        id: '1',
+        name: 'Metformin',
+        dosage: '500mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '2',
+        name: 'Atorvastatin',
+        dosage: '20mg',
+        time: '20:00',
+        type: 'regular'
+      },
+      {
+        id: '3',
+        name: 'Vitamin D3',
+        dosage: '1000IU',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '4',
+        name: 'Paracetamol',
+        dosage: '500mg',
+        time: 'PRN',
+        type: 'prn'
+      }
+    ],
+    conditions: [
+      'Type 2 Diabetes',
+      'Hyperlipidemia',
+      'Vitamin D Deficiency',
+      'Mild Arthritis'
+    ],
     behaviorPatterns: [],
     supportPlan: {
       id: '4',
@@ -229,7 +362,50 @@ export const participants: Participant[] = [
     riskLevel: 'low',
     currentStatus: 'resting',
     location: 'Bedroom',
-    medications: [],
+    medications: [
+      {
+        id: '1',
+        name: 'Donepezil',
+        dosage: '5mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '2',
+        name: 'Memantine',
+        dosage: '10mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '3',
+        name: 'Aspirin',
+        dosage: '100mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '4',
+        name: 'Simvastatin',
+        dosage: '40mg',
+        time: '20:00',
+        type: 'regular'
+      },
+      {
+        id: '5',
+        name: 'Multivitamin',
+        dosage: '1 tablet',
+        time: '08:00',
+        type: 'regular'
+      }
+    ],
+    conditions: [
+      'Mild Cognitive Impairment',
+      'Cardiovascular Disease',
+      'Hyperlipidemia',
+      'Osteoarthritis',
+      'Down Syndrome'
+    ],
     behaviorPatterns: [],
     supportPlan: {
       id: '5',
@@ -252,7 +428,50 @@ export const participants: Participant[] = [
     riskLevel: 'low',
     currentStatus: 'happy',
     location: 'Craft Room',
-    medications: [],
+    medications: [
+      {
+        id: '1',
+        name: 'Lamotrigine',
+        dosage: '200mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '2',
+        name: 'Venlafaxine',
+        dosage: '75mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '3',
+        name: 'Folic Acid',
+        dosage: '5mg',
+        time: '08:00',
+        type: 'regular'
+      },
+      {
+        id: '4',
+        name: 'Iron Supplement',
+        dosage: '325mg',
+        time: '12:00',
+        type: 'regular'
+      },
+      {
+        id: '5',
+        name: 'Naproxen',
+        dosage: '250mg',
+        time: 'PRN',
+        type: 'prn'
+      }
+    ],
+    conditions: [
+      'Epilepsy',
+      'Depression',
+      'Iron Deficiency Anemia',
+      'Cerebral Palsy',
+      'Chronic Pain Syndrome'
+    ],
     behaviorPatterns: [],
     supportPlan: {
       id: '6',
@@ -307,13 +526,13 @@ export const recentIncidents: Incident[] = [
   }
 ]
 
-// Active Alerts
+// Active Alerts - Pre-Shift Intelligence for 3 active participants
 export const activeAlerts: Alert[] = [
   {
     id: '1',
     type: 'risk',
     severity: 'warning',
-    message: 'James M. - Elevated risk (2-4 PM based on patterns)',
+    message: 'James M. - High risk participant. Review behavior management plan before shift.',
     timestamp: new Date().toISOString(),
     participantId: '1',
     acknowledged: false
@@ -322,7 +541,7 @@ export const activeAlerts: Alert[] = [
     id: '2',
     type: 'medication',
     severity: 'info',
-    message: 'Sarah C. - Medication due at 8 AM',
+    message: 'Sarah C. - Morning medications due at 8:00 AM (check PRN availability)',
     timestamp: new Date().toISOString(),
     participantId: '2',
     acknowledged: false
@@ -330,8 +549,17 @@ export const activeAlerts: Alert[] = [
   {
     id: '3',
     type: 'environmental',
-    severity: 'warning',
-    message: 'Maintenance scheduled in common area 10 AM',
+    severity: 'info',
+    message: 'Michael B. - Scheduled activity at 2:00 PM, ensure materials prepared',
+    timestamp: new Date().toISOString(),
+    participantId: '3',
+    acknowledged: false
+  },
+  {
+    id: '4',
+    type: 'risk',
+    severity: 'info',
+    message: '3 active participants today - All support plans reviewed and current',
     timestamp: new Date().toISOString(),
     acknowledged: false
   }

@@ -122,7 +122,7 @@ const generateAdministrations = (medications: Medication[]): MedicationAdministr
           participantId: med.participantId,
           scheduledTime,
           administeredTime: status === 'administered' ? scheduledTime : undefined,
-          administeredBy: status === 'administered' ? 'Sarah Johnson' : undefined,
+          administeredBy: status === 'administered' ? 'Bernard Adjei' : undefined,
           status,
           notes: status === 'administered' ? 'Given with breakfast' : undefined
         })
@@ -574,7 +574,7 @@ export default function MedicationsPage() {
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { participant: 'James Mitchell', medication: 'Lorazepam 1mg', time: '2:45 PM', reason: 'Anxiety during group activity', staff: 'Sarah Johnson' },
+                    { participant: 'James Mitchell', medication: 'Lorazepam 1mg', time: '2:45 PM', reason: 'Anxiety during group activity', staff: 'Bernard Adjei' },
                     { participant: 'Emma Wilson', medication: 'Paracetamol 500mg', time: '11:30 AM', reason: 'Headache complaint', staff: 'Tom Anderson' },
                     { participant: 'Michael Brown', medication: 'Lorazepam 1mg', time: '9:15 AM', reason: 'Pre-appointment anxiety', staff: 'Emily Chen' }
                   ].map((prn, index) => (

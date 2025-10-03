@@ -22,10 +22,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   const demoAccounts = [
-    { role: "Support Worker", email: "sarah.johnson@sunshinesupport.com.au", description: "Frontline staff view" },
-    { role: "Team Leader", email: "tom.anderson@sunshinesupport.com.au", description: "Supervisory dashboard" },
-    { role: "Clinical Manager", email: "dr.kim@sunshinesupport.com.au", description: "Clinical insights" },
-    { role: "Area Manager", email: "lisa.park@sunshinesupport.com.au", description: "Regional oversight" }
+    { role: "Support Worker", email: "bernard.adjei@maxlifecare.com.au", description: "Frontline staff view" },
+    { role: "Team Leader", email: "tom.anderson@maxlifecare.com.au", description: "Supervisory dashboard" },
+    { role: "Clinical Manager", email: "dr.kim@maxlifecare.com.au", description: "Clinical insights" },
+    { role: "Area Manager", email: "lisa.park@maxlifecare.com.au", description: "Regional oversight" }
   ]
 
   const handleLogin = async (loginEmail?: string) => {

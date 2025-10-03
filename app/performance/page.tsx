@@ -27,7 +27,7 @@ import { motion } from 'framer-motion'
 const staffPerformance = [
   {
     id: '1',
-    name: 'Sarah Johnson',
+    name: 'Bernard Adjei',
     role: 'Support Worker',
     facility: 'House 3',
     metrics: {

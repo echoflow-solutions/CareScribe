@@ -586,7 +586,7 @@ export default function CompliancePage() {
                 <CardContent>
                   <div className="space-y-3">
                     {[
-                      { staff: 'Sarah Johnson', cert: 'First Aid', expires: 15 },
+                      { staff: 'Bernard Adjei', cert: 'First Aid', expires: 15 },
                       { staff: 'Tom Anderson', cert: 'Medication Admin', expires: 22 },
                       { staff: 'Emily Chen', cert: 'Manual Handling', expires: 30 },
                       { staff: 'Mark Williams', cert: 'CPR', expires: 45 },

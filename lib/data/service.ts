@@ -35,9 +35,21 @@ export class DataService {
       return
     }
 
-    // Only initialize local storage if not using Supabase
-    // This code path should not be reached when NEXT_PUBLIC_USE_LOCAL_STORAGE=false
-    console.warn('Local storage mode - this should not happen in production')
+    // Initialize local storage with demo data
+    console.log('Initializing demo data in local storage')
+    
+    // Check if data already exists
+    const existingUsers = await storage.get(STORAGE_KEYS.USERS)
+    if (!existingUsers || existingUsers.length === 0) {
+      await storage.set(STORAGE_KEYS.USERS, users)
+      await storage.set(STORAGE_KEYS.ORGANIZATION, organization)
+      await storage.set(STORAGE_KEYS.PARTICIPANTS, participants)
+      await storage.set(STORAGE_KEYS.INCIDENTS, recentIncidents)
+      await storage.set(STORAGE_KEYS.ALERTS, activeAlerts)
+      await storage.set(STORAGE_KEYS.ROUTING_RULES, routingRules)
+      await storage.set(STORAGE_KEYS.CURRENT_SHIFT, currentShift)
+      console.log('Demo data initialized successfully')
+    }
   }
 
   // User methods
@@ -66,16 +78,19 @@ export class DataService {
       const user = await SupabaseService.getUserByEmail(email)
       if (user) {
         await this.setCurrentUser(user)
+        return user
       }
-      return user
+
+      console.warn(`Supabase user not found for ${email}, falling back to demo data`)
     }
 
-    const users = await this.getUsers()
-    const user = users.find(u => u.email === email)
-    if (user) {
-      await this.setCurrentUser(user)
+    const fallbackUser = users.find((u) => u.email === email)
+    if (fallbackUser) {
+      await this.setCurrentUser(fallbackUser)
+      return fallbackUser
     }
-    return user || null
+
+    return null
   }
 
   // Organization methods

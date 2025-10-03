@@ -120,7 +120,7 @@ DECLARE
 BEGIN
     -- Add specific support workers first
     INSERT INTO users (email, name, role_id, facility_id, phone, status) VALUES
-    ('sarah.johnson@sunshinesupport.com.au', 'Sarah Johnson', '550e8400-e29b-41d4-a716-446655440004', '650e8400-e29b-41d4-a716-446655440003', '0400444001', 'active');
+    ('bernard.adjei@maxlifecare.com.au', 'Bernard Adjei', '550e8400-e29b-41d4-a716-446655440004', '650e8400-e29b-41d4-a716-446655440003', '0400444001', 'active');
     
     -- Generate additional support workers
     FOR i IN 1..11 LOOP

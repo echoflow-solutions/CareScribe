@@ -37,7 +37,7 @@ After setup, the app should automatically connect to Supabase when you:
 
 ## Demo Accounts Available
 
-- **Support Worker**: sarah.johnson@sunshinesupport.com.au
+- **Support Worker**: bernard.adjei@maxlifecare.com.au
 - **Team Leader**: tom.anderson@sunshinesupport.com.au
 - **Clinical Manager**: dr.kim@sunshinesupport.com.au
 - **Area Manager**: lisa.park@sunshinesupport.com.au

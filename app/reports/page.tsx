@@ -54,7 +54,7 @@ interface Report {
 const generateReports = (): Report[] => {
   const reports: Report[] = []
   const participants = ['James Mitchell', 'Sarah Chen', 'Michael Brown', 'Emma Wilson', 'David Lee']
-  const reporters = ['Sarah Johnson', 'Tom Anderson', 'Emily Chen', 'Mark Williams']
+  const reporters = ['Bernard Adjei', 'Tom Anderson', 'Emily Chen', 'Mark Williams']
   const facilities = ['House 1 - Riverside', 'House 2 - Parkview', 'House 3 - Sunshine']
   const types = ['behavioral', 'medical', 'property', 'other'] as const
   const severities = ['low', 'medium', 'high'] as const

@@ -220,7 +220,7 @@ export default function OrganizationSetupPage() {
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="Sunshine Support Services"
+                      placeholder="Maxlife Care"
                     />
                   </div>
                   <div>
