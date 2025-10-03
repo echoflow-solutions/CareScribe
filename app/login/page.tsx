@@ -11,14 +11,16 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/hooks/use-toast'
 import { useStore } from '@/lib/store'
 import { DataService } from '@/lib/data/service'
-import { ArrowLeft, LogIn, Sparkles, User } from 'lucide-react'
+import { ArrowLeft, LogIn, Sparkles, User, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { setCurrentUser, setOrganization } = useStore()
+  const { setCurrentUser, setOrganization, setCurrentShift } = useStore()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const demoAccounts = [
@@ -28,7 +30,7 @@ export default function LoginPage() {
     { role: "Area Manager", email: "lisa.park@maxlifecare.com.au", description: "Regional oversight" }
   ]
 
-  const handleLogin = async (loginEmail?: string) => {
+  const handleLogin = async (loginEmail?: string, skipPassword?: boolean) => {
     const emailToUse = loginEmail || email
     if (!emailToUse) {
       toast({
@@ -41,12 +43,47 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      const user = await DataService.authenticateUser(emailToUse)
+      // For quick login, skip password. For manual login, use password if provided
+      const passwordToUse = skipPassword ? undefined : (password || undefined)
+      const user = await DataService.authenticateUser(emailToUse, passwordToUse)
       if (user) {
         setCurrentUser(user)
         const org = await DataService.getOrganization()
         if (org) setOrganization(org)
-        
+
+        // Restore active shift if exists (for support workers)
+        if (user.role.level === 4) {
+          const activeShift = await DataService.getCurrentShift()
+          if (activeShift) {
+            // Validate the shift - make sure it's not expired or invalid
+            const endTime = new Date(activeShift.endTime)
+            const now = new Date()
+
+            if (endTime > now && activeShift.status === 'active') {
+              setCurrentShift(activeShift)
+              console.log('Restored active shift for', user.name, ':', activeShift)
+            } else {
+              console.log('Shift expired or inactive, clearing it')
+              setCurrentShift(null)
+              // Clear from database if it exists
+              if (activeShift.id) {
+                try {
+                  await DataService.endShift(activeShift.id)
+                } catch (error) {
+                  console.warn('Error ending expired shift:', error)
+                }
+              }
+            }
+          } else {
+            // No active shift found for this user - clear any existing shift in store
+            console.log('No active shift found for', user.name, '- clearing shift state')
+            setCurrentShift(null)
+          }
+        } else {
+          // Not a support worker - clear shift state
+          setCurrentShift(null)
+        }
+
         toast({
           title: "Welcome back!",
           description: `Logged in as ${user.name}`,
@@ -61,7 +98,7 @@ export default function LoginPage() {
       } else {
         toast({
           title: "Login failed",
-          description: "Please use one of the demo accounts",
+          description: passwordToUse !== undefined ? "Invalid email or password" : "Please use one of the demo accounts",
           variant: "destructive"
         })
       }
@@ -108,7 +145,7 @@ export default function LoginPage() {
                   <Button
                     variant="outline"
                     className="w-full justify-start h-auto p-4"
-                    onClick={() => handleLogin(account.email)}
+                    onClick={() => handleLogin(account.email, true)}
                     disabled={isLoading}
                   >
                     <div className="flex items-start gap-3 text-left">
@@ -152,16 +189,30 @@ export default function LoginPage() {
               </div>
               
               <div>
-                <Label htmlFor="password" className="text-gray-500">
-                  Password (not required for demo)
+                <Label htmlFor="password">
+                  Password
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Leave empty for demo"
-                  disabled
-                  className="mt-1"
-                />
+                <div className="relative mt-1">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password (demo: 'demo')"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>

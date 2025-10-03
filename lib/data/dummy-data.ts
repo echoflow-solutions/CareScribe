@@ -40,6 +40,7 @@ export const users: User[] = [
     role: roles[3], // Support Worker
     facilityId: 'house-3',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bernard',
+    password: 'demo',
     createdAt: '2024-01-15T10:00:00Z'
   },
   {
@@ -49,6 +50,7 @@ export const users: User[] = [
     role: roles[2], // Team Leader
     facilityId: 'house-3',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Tom',
+    password: 'demo',
     createdAt: '2023-06-20T10:00:00Z'
   },
   {
@@ -57,6 +59,7 @@ export const users: User[] = [
     name: 'Dr. Sarah Kim',
     role: roles[1], // Clinical Manager (Area Manager level)
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=DrKim',
+    password: 'demo',
     createdAt: '2022-03-10T10:00:00Z'
   },
   {
@@ -65,7 +68,38 @@ export const users: User[] = [
     name: 'Lisa Park',
     role: roles[1], // Area Manager
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
+    password: 'demo',
     createdAt: '2021-11-05T10:00:00Z'
+  },
+  {
+    id: '5',
+    email: 'dermot@maxlifecare.com.au',
+    name: 'Dermot Roche',
+    role: roles[3], // Support Worker
+    facilityId: 'house-3',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dermot',
+    password: 'demo',
+    createdAt: '2024-01-20T10:00:00Z'
+  },
+  {
+    id: '6',
+    email: 'elyce.p@maxlifecare.com.au',
+    name: 'Elyce Pobiega',
+    role: roles[3], // Support Worker
+    facilityId: 'house-3',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elyce',
+    password: 'demo',
+    createdAt: '2024-01-22T10:00:00Z'
+  },
+  {
+    id: '7',
+    email: 'guest@maxlifecare.com.au',
+    name: 'Guest Guest',
+    role: roles[3], // Support Worker
+    facilityId: 'house-3',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Guest',
+    password: 'demo',
+    createdAt: '2024-01-25T10:00:00Z'
   }
 ]
 

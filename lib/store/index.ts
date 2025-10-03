@@ -59,12 +59,12 @@ export const useStore = create<AppState>()(
       setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
       
       // Clear all persisted state (for logout)
-      clearState: () => set({
+      clearState: () => set((state) => ({
         currentUser: null,
         organization: null,
-        currentShift: null,
+        currentShift: null, // Clear shift on logout - will be restored from database on login
         isDemoMode: true,
-      }),
+      })),
     }),
     {
       name: 'carescribe-storage', // name of the item in storage

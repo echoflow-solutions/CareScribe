@@ -16,6 +16,9 @@ import {
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/hooks/use-toast'
 import { useStore } from '@/lib/store'
 import { DataService } from '@/lib/data/service'
 import { format } from 'date-fns'
@@ -23,12 +26,16 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 
 function ShiftStartContent() {
   const router = useRouter()
+  const { toast } = useToast()
   const { currentUser, currentShift, setCurrentShift, hasHydrated } = useStore()
   const [alerts, setAlerts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showStaffList, setShowStaffList] = useState(false)
   const [showClockOutModal, setShowClockOutModal] = useState(false)
+  const [showShiftEndedModal, setShowShiftEndedModal] = useState(false)
+  const [handoverNotes, setHandoverNotes] = useState('')
+  const [progressNotes, setProgressNotes] = useState('')
   const [onBreak, setOnBreak] = useState(false)
   const [breakStartTime, setBreakStartTime] = useState<Date | null>(null)
   const [totalBreakTime, setTotalBreakTime] = useState(0)
@@ -96,18 +103,50 @@ function ShiftStartContent() {
     console.log('[Shift Start] Has hydrated:', hasHydrated)
     console.log('[Shift Start] Is shift active:', isShiftActive)
 
+    // Validate current shift on mount - clear if invalid
+    if (currentShift && hasHydrated) {
+      const endTime = new Date(currentShift.endTime)
+      const now = new Date()
+
+      // If shift has expired or is invalid, clear it
+      if (endTime <= now || currentShift.status !== 'active') {
+        console.log('[Shift Start] Shift expired or invalid, clearing it')
+        setCurrentShift(null)
+
+        // Try to end it in database
+        if (currentShift.id) {
+          DataService.endShift(currentShift.id).catch((error) => {
+            console.warn('[Shift Start] Error ending expired shift:', error)
+          })
+        }
+      }
+    }
+
     // Update time every second
     const timer = setInterval(() => {
       setCurrentTime(new Date())
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [hasHydrated])
 
   useEffect(() => {
     // Monitor currentShift changes
     console.log('[Shift Start] currentShift changed:', currentShift)
   }, [currentShift])
+
+  // Detect when shift time expires
+  useEffect(() => {
+    if (currentShift && isShiftActive) {
+      const timeRemaining = getTimeRemaining()
+
+      // Check if shift has ended (countdown reached 0)
+      if (timeRemaining && timeRemaining.total <= 0) {
+        console.log('[Shift Start] Shift time has expired! Opening shift end modal...')
+        setShowShiftEndedModal(true)
+      }
+    }
+  }, [currentTime, currentShift, isShiftActive])
 
   const loadAlerts = async () => {
     try {
@@ -159,8 +198,7 @@ function ShiftStartContent() {
       const startTime = new Date()
       const endTime = new Date(startTime.getTime() + 8 * 60 * 60 * 1000) // 8 hours
 
-      const shift = {
-        id: `shift-${Date.now()}`,
+      const shiftData = {
         staffId: currentUser!.id,
         facilityId: '650e8400-e29b-41d4-a716-446655440003', // Parramatta - Maxlife Care UUID
         startTime: startTime.toISOString(),
@@ -168,10 +206,11 @@ function ShiftStartContent() {
         status: 'active' as const
       }
 
-      console.log('[Shift Start] Clocking in with shift:', shift)
-      await DataService.startShift(shift)
-      setCurrentShift(shift) // This will persist to localStorage automatically
-      console.log('[Shift Start] Shift saved to store')
+      console.log('[Shift Start] Clocking in with shift data:', shiftData)
+      // DataService.startShift now saves to database and returns shift with database ID
+      const createdShift = await DataService.startShift(shiftData as any)
+      setCurrentShift(createdShift) // Store shift with database ID
+      console.log('[Shift Start] Shift saved to database and store with ID:', createdShift.id)
       console.log('[Shift Start] localStorage after save:', localStorage.getItem('carescribe-storage'))
       setIsLoading(false)
     } catch (error) {
@@ -230,6 +269,49 @@ function ShiftStartContent() {
     if (hour < 12) return 'Good Morning'
     if (hour < 17) return 'Good Afternoon'
     return 'Good Evening'
+  }
+
+  const handleShiftEndComplete = async () => {
+    if (!currentShift) return
+
+    setIsLoading(true)
+    try {
+      // End shift with handover notes
+      await DataService.endShift(currentShift.id, handoverNotes)
+
+      // Clear shift from store
+      setCurrentShift(null)
+
+      // Reset states
+      setShowShiftEndedModal(false)
+      setHandoverNotes('')
+      setProgressNotes('')
+      setOnBreak(false)
+      setBreakStartTime(null)
+      setTotalBreakTime(0)
+      setTasksCompleted({
+        progressNotes: false,
+        medicationReview: false,
+        incidentReports: false,
+        handoverNotes: false
+      })
+
+      toast({
+        title: "Shift Ended",
+        description: "Your shift has been completed successfully. Thank you for your hard work!",
+      })
+
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('Error completing shift:', error)
+      setIsLoading(false)
+      toast({
+        title: "Error",
+        description: "Failed to complete shift. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   if (!currentUser) return null
@@ -860,6 +942,117 @@ function ShiftStartContent() {
             >
               <LogOut className="mr-2 h-4 w-4" />
               Clock Out Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shift Ended Modal */}
+      <Dialog open={showShiftEndedModal} onOpenChange={setShowShiftEndedModal}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              Shift Ended - Complete Handover
+            </DialogTitle>
+            <DialogDescription>
+              Your scheduled shift time has ended. Please complete your handover notes and progress reports before finishing.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Shift Summary */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 className="font-semibold text-blue-900 mb-2">Shift Summary</h4>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-blue-700">Started:</span>
+                  <span className="ml-2 font-medium">{shiftStartTime && format(shiftStartTime, 'h:mm a')}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Ended:</span>
+                  <span className="ml-2 font-medium">{shiftEndTime && format(shiftEndTime, 'h:mm a')}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Duration:</span>
+                  <span className="ml-2 font-medium">8 hours</span>
+                </div>
+                <div>
+                  <span className="text-blue-700">Break Time:</span>
+                  <span className="ml-2 font-medium">{formatDuration(totalBreakTime)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Handover Notes - Required */}
+            <div>
+              <Label htmlFor="handover-notes" className="text-base font-semibold flex items-center gap-2">
+                Handover Notes
+                <Badge variant="destructive" className="text-xs">Required</Badge>
+              </Label>
+              <p className="text-sm text-gray-600 mb-2 mt-1">
+                Provide important information for the next shift (participant updates, incidents, tasks pending, etc.)
+              </p>
+              <Textarea
+                id="handover-notes"
+                placeholder="Example: Sarah had a good day, completed all activities. Medication administered at 2pm. John needs follow-up for appointment tomorrow at 10am..."
+                value={handoverNotes}
+                onChange={(e) => setHandoverNotes(e.target.value)}
+                rows={5}
+                className="resize-none"
+              />
+            </div>
+
+            {/* Progress Notes - Optional */}
+            <div>
+              <Label htmlFor="progress-notes" className="text-base font-semibold flex items-center gap-2">
+                Progress Notes
+                <Badge variant="secondary" className="text-xs">Optional</Badge>
+              </Label>
+              <p className="text-sm text-gray-600 mb-2 mt-1">
+                Document participant progress, behaviors, achievements, or concerns observed during your shift
+              </p>
+              <Textarea
+                id="progress-notes"
+                placeholder="Example: Sarah showed improved communication skills today. Participated actively in group activities..."
+                value={progressNotes}
+                onChange={(e) => setProgressNotes(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+
+            {/* Reminder */}
+            <Alert className="border-l-4 border-l-yellow-500">
+              <AlertDescription className="flex items-start gap-3">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                <span className="text-sm">
+                  All handover notes will be available to the next shift. Ensure all critical information is documented.
+                </span>
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter className="sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setShowShiftEndedModal(false)}
+            >
+              Continue Shift
+            </Button>
+            <Button
+              onClick={handleShiftEndComplete}
+              disabled={!handoverNotes.trim() || isLoading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isLoading ? (
+                <>Processing...</>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Complete Shift & Submit
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

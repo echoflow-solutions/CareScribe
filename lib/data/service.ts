@@ -73,10 +73,15 @@ export class DataService {
     return (await storage.get(STORAGE_KEYS.USERS)) || []
   }
 
-  static async authenticateUser(email: string): Promise<User | null> {
+  static async authenticateUser(email: string, password?: string): Promise<User | null> {
     if (this.useSupabase()) {
       const user = await SupabaseService.getUserByEmail(email)
       if (user) {
+        // Validate password if provided
+        if (password !== undefined && user.password !== password) {
+          console.warn(`Invalid password for ${email}`)
+          return null
+        }
         await this.setCurrentUser(user)
         return user
       }
@@ -86,6 +91,11 @@ export class DataService {
 
     const fallbackUser = users.find((u) => u.email === email)
     if (fallbackUser) {
+      // Validate password if provided
+      if (password !== undefined && fallbackUser.password !== password) {
+        console.warn(`Invalid password for ${email}`)
+        return null
+      }
       await this.setCurrentUser(fallbackUser)
       return fallbackUser
     }
@@ -247,18 +257,18 @@ export class DataService {
     return await storage.get(STORAGE_KEYS.CURRENT_SHIFT)
   }
 
-  static async startShift(shift: Shift) {
+  static async startShift(shift: Shift): Promise<Shift> {
     if (this.useSupabase()) {
-      await SupabaseService.createShift(shift)
-      return
+      const createdShift = await SupabaseService.createShift(shift)
+      return createdShift
     }
     await storage.set(STORAGE_KEYS.CURRENT_SHIFT, shift)
+    return shift
   }
 
-  static async endShift(handoverNotes: string) {
+  static async endShift(shiftId: string, handoverNotes?: string): Promise<void> {
     if (this.useSupabase()) {
-      // Would need to implement update method in SupabaseService
-      console.log('Shift end not implemented for Supabase yet')
+      await SupabaseService.endShift(shiftId, handoverNotes)
       return
     }
 
@@ -267,6 +277,19 @@ export class DataService {
       shift.status = 'completed'
       shift.handoverNotes = handoverNotes
       shift.endTime = new Date().toISOString()
+      await storage.set(STORAGE_KEYS.CURRENT_SHIFT, shift)
+    }
+  }
+
+  static async updateShift(shiftId: string, updates: Partial<Shift>): Promise<void> {
+    if (this.useSupabase()) {
+      await SupabaseService.updateShift(shiftId, updates)
+      return
+    }
+
+    const shift = await this.getCurrentShift()
+    if (shift) {
+      Object.assign(shift, updates)
       await storage.set(STORAGE_KEYS.CURRENT_SHIFT, shift)
     }
   }

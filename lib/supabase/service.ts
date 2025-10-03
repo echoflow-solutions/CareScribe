@@ -79,7 +79,7 @@ export class SupabaseService {
 
   static async getUserByEmail(email: string): Promise<User | null> {
     if (!this.isAvailable()) return null
-    
+
     const { data, error } = await supabase!
       .from('users')
       .select(`
@@ -88,9 +88,9 @@ export class SupabaseService {
       `)
       .eq('email', email)
       .single()
-    
+
     if (error || !data) return null
-    
+
     return {
       id: data.id,
       email: data.email,
@@ -108,6 +108,7 @@ export class SupabaseService {
       },
       facilityId: data.facility_id || undefined,
       avatar: data.avatar || undefined,
+      password: data.password || undefined, // Include password for authentication
       createdAt: data.created_at
     }
   }
@@ -355,16 +356,18 @@ export class SupabaseService {
   // Shift methods
   static async getCurrentShift(staffId: string): Promise<Shift | null> {
     if (!this.isAvailable()) return null
-    
+
     const { data, error } = await supabase!
       .from('shifts')
       .select('*')
       .eq('staff_id', staffId)
       .eq('status', 'active')
-      .single()
-    
+      .order('start_time', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
     if (error || !data) return null
-    
+
     return {
       id: data.id,
       staffId: data.staff_id || '',
@@ -376,21 +379,98 @@ export class SupabaseService {
     }
   }
 
-  static async createShift(shift: Omit<Shift, 'id'>): Promise<void> {
-    if (!this.isAvailable()) return
-    
-    const { error } = await supabase!
+  static async createShift(shift: Omit<Shift, 'id'>): Promise<Shift> {
+    if (!this.isAvailable()) {
+      throw new Error('Supabase not available')
+    }
+
+    const { data, error } = await supabase!
       .from('shifts')
       .insert({
         staff_id: shift.staffId,
         facility_id: shift.facilityId,
         start_time: shift.startTime,
         end_time: shift.endTime,
-        status: shift.status
+        status: shift.status,
+        handover_notes: shift.handoverNotes
       })
-    
+      .select()
+      .single()
+
     if (error) {
       console.error('Error creating shift:', error)
+      throw error
+    }
+
+    return {
+      id: data.id,
+      staffId: data.staff_id || '',
+      facilityId: data.facility_id || '',
+      startTime: data.start_time,
+      endTime: data.end_time || '',
+      handoverNotes: data.handover_notes || undefined,
+      status: data.status as any
+    }
+  }
+
+  static async updateShift(shiftId: string, updates: Partial<Shift>): Promise<void> {
+    if (!this.isAvailable()) return
+
+    const updateData: any = {}
+    if (updates.endTime !== undefined) updateData.end_time = updates.endTime
+    if (updates.status !== undefined) updateData.status = updates.status
+    if (updates.handoverNotes !== undefined) updateData.handover_notes = updates.handoverNotes
+
+    const { error } = await supabase!
+      .from('shifts')
+      .update(updateData)
+      .eq('id', shiftId)
+
+    if (error) {
+      console.error('Error updating shift:', error)
+      throw error
+    }
+  }
+
+  static async endShift(shiftId: string, handoverNotes?: string): Promise<void> {
+    if (!this.isAvailable()) return
+
+    // First check if shift exists
+    const { data: existingShift, error: fetchError } = await supabase!
+      .from('shifts')
+      .select('id, status')
+      .eq('id', shiftId)
+      .maybeSingle()
+
+    if (fetchError) {
+      console.error('Error fetching shift:', fetchError)
+      throw fetchError
+    }
+
+    // If shift doesn't exist, just return (it's already gone)
+    if (!existingShift) {
+      console.warn(`Shift ${shiftId} not found in database - already ended or doesn't exist`)
+      return
+    }
+
+    // If shift already completed, just return
+    if (existingShift.status === 'completed') {
+      console.warn(`Shift ${shiftId} is already completed`)
+      return
+    }
+
+    // Update the shift
+    const { error } = await supabase!
+      .from('shifts')
+      .update({
+        status: 'completed',
+        end_time: new Date().toISOString(),
+        handover_notes: handoverNotes
+      })
+      .eq('id', shiftId)
+
+    if (error) {
+      console.error('Error ending shift:', error)
       throw error
     }
   }

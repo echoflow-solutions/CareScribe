@@ -7,6 +7,7 @@ export interface User {
   facilityId?: string
   avatar?: string
   createdAt: string
+  password?: string // Demo purposes only - plain text password
 }
 
 export interface Role {
