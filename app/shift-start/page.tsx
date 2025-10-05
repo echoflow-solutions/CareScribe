@@ -21,6 +21,8 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/hooks/use-toast'
 import { useStore } from '@/lib/store'
 import { DataService } from '@/lib/data/service'
+import { SupabaseService } from '@/lib/supabase/service'
+import { Participant } from '@/lib/types'
 import { format } from 'date-fns'
 import { AuthGuard } from '@/components/auth/auth-guard'
 
@@ -29,6 +31,7 @@ function ShiftStartContent() {
   const { toast } = useToast()
   const { currentUser, currentShift, setCurrentShift, hasHydrated } = useStore()
   const [alerts, setAlerts] = useState<any[]>([])
+  const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showStaffList, setShowStaffList] = useState(false)
@@ -94,9 +97,32 @@ function ShiftStartContent() {
     }
   ]
 
+  const loadParticipants = async () => {
+    if (!currentShift?.id) {
+      console.log('[Shift Start] No current shift, clearing participants')
+      setParticipants([])
+      return
+    }
+
+    try {
+      console.log('[Shift Start] Loading participants for shift:', currentShift.id)
+      const shiftParticipants = await SupabaseService.getShiftParticipants(currentShift.id)
+      console.log('[Shift Start] Loaded participants:', shiftParticipants)
+      setParticipants(shiftParticipants)
+    } catch (error) {
+      console.error('[Shift Start] Error loading participants:', error)
+      setParticipants([])
+    }
+  }
+
   useEffect(() => {
     // Load alerts
     loadAlerts()
+
+    // Load participants when shift becomes active
+    if (currentShift?.id && hasHydrated) {
+      loadParticipants()
+    }
 
     // Debug: Log shift state on mount
     console.log('[Shift Start] Current shift from store:', currentShift)
@@ -131,9 +157,14 @@ function ShiftStartContent() {
   }, [hasHydrated])
 
   useEffect(() => {
-    // Monitor currentShift changes
+    // Monitor currentShift changes and reload participants
     console.log('[Shift Start] currentShift changed:', currentShift)
-  }, [currentShift])
+    if (currentShift?.id && hasHydrated) {
+      loadParticipants()
+    } else {
+      setParticipants([])
+    }
+  }, [currentShift, hasHydrated])
 
   // Detect when shift time expires
   useEffect(() => {
@@ -377,9 +408,56 @@ function ShiftStartContent() {
                     </div>
                     <div className="flex items-center justify-center gap-2 text-gray-600">
                       <Users className="h-5 w-5 flex-shrink-0" />
-                      <span className="whitespace-nowrap">3 active participants</span>
+                      <span className="whitespace-nowrap">{participants.length} participant{participants.length !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
+
+                  {/* Participants List */}
+                  {participants.length > 0 && (
+                    <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Participants for This Shift
+                      </h3>
+                      <div className="space-y-2">
+                        {participants.map(participant => (
+                          <div
+                            key={participant.id}
+                            className="flex items-center gap-3 bg-white p-3 rounded-md"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
+                              {participant.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">{participant.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {participant.age ? `Age ${participant.age}` : 'Age not specified'}
+                                {participant.riskLevel && ` • Risk: ${participant.riskLevel}`}
+                              </p>
+                            </div>
+                            {participant.riskLevel && (
+                              <Badge variant={
+                                participant.riskLevel === 'high' ? 'destructive' :
+                                participant.riskLevel === 'medium' ? 'secondary' :
+                                'outline'
+                              }>
+                                {participant.riskLevel}
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {participants.length === 0 && (
+                    <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-sm text-yellow-800 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        No participants assigned to this shift
+                      </p>
+                    </div>
+                  )}
 
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
@@ -506,7 +584,7 @@ function ShiftStartContent() {
                       >
                         <Users className="h-5 w-5" />
                         <span className="text-xs font-semibold">Participants</span>
-                        <span className="text-xs text-gray-500">3 Active</span>
+                        <span className="text-xs text-gray-500">{participants.length} Active</span>
                       </Button>
                     </motion.div>
                   </div>

@@ -12,7 +12,8 @@ import {
   Home, FileText, Clock, Pill, AlertCircle, BarChart3,
   Shield, Users, Settings, LogOut, ChevronLeft, ChevronRight,
   Mic, Menu, X, Sparkles, Building, UserCheck, Bell,
-  TrendingUp, Calendar, MessageSquare, HelpCircle, Play
+  TrendingUp, Calendar, MessageSquare, HelpCircle, Play,
+  Radio, Newspaper, ListTodo, Zap, GraduationCap, Trophy, Heart
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -57,6 +58,18 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
         },
         ...baseItems,
         {
+          title: "Today's Briefing",
+          icon: Newspaper,
+          href: '/briefing',
+          badge: 'New',
+        },
+        {
+          title: 'Smart Tasks',
+          icon: ListTodo,
+          href: '/tasks',
+          badge: 5, // Pending tasks count
+        },
+        {
           title: 'Shifts',
           icon: Clock,
           href: '/shifts',
@@ -69,10 +82,46 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
           badge: null,
         },
         {
-          title: 'Participants',
+          title: 'My Participants',
           icon: Users,
-          href: '/setup/participants',
+          href: '/participants',
           badge: null,
+        },
+        {
+          title: 'Team Pulse',
+          icon: Radio,
+          href: '/team-pulse',
+          badge: 2, // Unread messages
+        },
+        {
+          title: 'Quick Actions',
+          icon: Zap,
+          href: '/quick-actions',
+          badge: null,
+        },
+        {
+          title: 'Training',
+          icon: GraduationCap,
+          href: '/training',
+          badge: null,
+        },
+        {
+          title: 'My Performance',
+          icon: Trophy,
+          href: '/performance',
+          badge: null,
+        },
+        {
+          title: 'Wellness Check',
+          icon: Heart,
+          href: '/wellness',
+          badge: 'Daily',
+        },
+        {
+          title: 'Notifications',
+          icon: Bell,
+          href: '/notifications',
+          badge: notifications > 0 ? notifications : null,
         },
       ]
     }
@@ -100,7 +149,7 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
           badge: notifications > 0 ? notifications : null,
         },
         {
-          title: 'Participants',
+          title: 'Manage Participants',
           icon: Users,
           href: '/setup/participants',
           badge: null,
@@ -148,7 +197,7 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
         badge: null,
       },
       {
-        title: 'Participants',
+        title: 'Manage Participants',
         icon: Users,
         href: '/setup/participants',
         badge: null,

@@ -149,6 +149,16 @@ export class DataService {
     }
   }
 
+  static async getShiftParticipants(shiftId: string): Promise<Participant[]> {
+    if (this.useSupabase()) {
+      return await SupabaseService.getShiftParticipants(shiftId)
+    }
+    // Fallback: return hardcoded participants for demo
+    const allParticipants = await this.getParticipants()
+    const SHIFT_PARTICIPANT_NAMES = ['Michael Brown', 'Emma Wilson', 'Lisa Thompson']
+    return allParticipants.filter(p => SHIFT_PARTICIPANT_NAMES.includes(p.name))
+  }
+
   // Incident methods
   static async getIncidents(): Promise<Incident[]> {
     if (this.useSupabase()) {

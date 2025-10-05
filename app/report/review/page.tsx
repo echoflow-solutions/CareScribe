@@ -56,7 +56,7 @@ Result: James calmed within 10 minutes, no injuries`
   }, [currentUser, router, searchParams])
 
   const handleSubmit = async () => {
-    // Create incident record
+    // Create incident record with facility_id for cross-user synchronization
     const incident = {
       id: Date.now().toString(),
       participantId: '1', // James Mitchell
@@ -64,7 +64,8 @@ Result: James calmed within 10 minutes, no injuries`
       type: 'behavioral' as const,
       severity: 'medium' as const,
       timestamp: new Date().toISOString(),
-      location: 'Living Room - House 3',
+      location: currentUser!.facilityId || 'Living Room - House 3',
+      facilityId: currentUser!.facilityId, // CRITICAL: Enables cross-user sync at facility level
       staffId: currentUser!.id,
       staffName: currentUser!.name,
       description: 'Sensory overload due to loud maintenance noise, resulting in property damage',

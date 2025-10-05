@@ -161,12 +161,6 @@ function DashboardContent() {
   ])
 
   useEffect(() => {
-    // Support workers need an active shift
-    if (currentUser && currentUser.role.level === 4 && !currentShift) {
-      router.push('/shift-start')
-      return
-    }
-
     // Load data
     loadDashboardData()
 
@@ -293,9 +287,6 @@ function DashboardContent() {
   }
 
   if (!currentUser) return null
-  
-  // Support workers need a shift, others don't
-  if (currentUser.role.level === 4 && !currentShift) return null
 
   return (
     <div className="min-h-screen bg-gray-50">

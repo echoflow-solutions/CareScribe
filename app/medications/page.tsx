@@ -55,82 +55,549 @@ interface MedicationAdministration {
   reason?: string
 }
 
-// Generate mock medications
-const generateMedications = (): Medication[] => {
-  const participants = [
-    'James Mitchell', 'Sarah Chen', 'Michael Brown', 
-    'Emma Wilson', 'David Lee', 'Lisa Thompson'
-  ]
-  const medications: Medication[] = []
-  
-  const medicationTemplates = [
-    { name: 'Risperidone', dosage: '2mg', type: 'regular', prescriber: 'Dr. Sarah Kim' },
-    { name: 'Lorazepam', dosage: '1mg', type: 'prn', prescriber: 'Dr. Sarah Kim' },
-    { name: 'Sertraline', dosage: '50mg', type: 'regular', prescriber: 'Dr. John Smith' },
-    { name: 'Melatonin', dosage: '3mg', type: 'regular', prescriber: 'Dr. Sarah Kim' },
-    { name: 'Paracetamol', dosage: '500mg', type: 'prn', prescriber: 'Dr. John Smith' }
-  ]
+interface WebsterPackSlot {
+  id: string
+  participantName: string
+  sessionTime: 'Morning' | 'Afternoon' | 'Evening' | 'Night'
+  medications: {
+    name: string
+    dosage: string
+    pillCount: number
+  }[]
+  totalPills: number
+  status: 'pending' | 'administered' | 'missed' | 'refused'
+  scheduledTime: Date
+}
 
-  participants.forEach((participant, pIndex) => {
-    // Each participant has 1-3 medications
-    const numMeds = Math.floor(Math.random() * 3) + 1
-    for (let i = 0; i < numMeds; i++) {
-      const template = medicationTemplates[Math.floor(Math.random() * medicationTemplates.length)]
-      medications.push({
-        id: `med-${pIndex}-${i}`,
-        participantId: `p-${pIndex}`,
-        participantName: participant,
-        name: template.name,
-        dosage: template.dosage,
-        prescriber: template.prescriber,
-        type: template.type as 'regular' | 'prn',
-        schedule: template.type === 'regular' ? [
-          { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
-          ...(Math.random() > 0.5 ? [{ time: '20:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }] : [])
-        ] : [],
-        instructions: template.type === 'prn' ? 'As needed for anxiety' : 'Take with food',
-        sideEffects: ['Drowsiness', 'Dry mouth'],
-        startDate: new Date(2024, 0, 1),
-        active: true
-      })
+// Generate mock medications - consistent for each participant
+const generateMedications = (): Medication[] => {
+  const medications: Medication[] = []
+
+  // James Mitchell - Risperidone (regular), Sertraline (regular), Ibuprofen (PRN)
+  medications.push(
+    {
+      id: 'med-0-0',
+      participantId: 'p-0',
+      participantName: 'James Mitchell',
+      name: 'Risperidone',
+      dosage: '2mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+        { time: '18:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Drowsiness', 'Dry mouth'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-0-1',
+      participantId: 'p-0',
+      participantName: 'James Mitchell',
+      name: 'Sertraline',
+      dosage: '50mg',
+      prescriber: 'Dr. John Smith',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Nausea', 'Headache'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-0-2',
+      participantId: 'p-0',
+      participantName: 'James Mitchell',
+      name: 'Ibuprofen',
+      dosage: '400mg',
+      prescriber: 'Dr. John Smith',
+      type: 'prn',
+      schedule: [],
+      instructions: 'As needed for pain or inflammation',
+      sideEffects: ['Stomach upset', 'Nausea'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-0-3',
+      participantId: 'p-0',
+      participantName: 'James Mitchell',
+      name: 'Melatonin',
+      dosage: '3mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '00:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take before bed',
+      sideEffects: ['Drowsiness'],
+      startDate: new Date(2024, 0, 1),
+      active: true
     }
-  })
+  )
+
+  // Sarah Chen - Risperidone (regular), Sertraline (regular), Melatonin (regular), Ondansetron (PRN)
+  medications.push(
+    {
+      id: 'med-1-0',
+      participantId: 'p-1',
+      participantName: 'Sarah Chen',
+      name: 'Risperidone',
+      dosage: '2mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+        { time: '00:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Drowsiness', 'Dry mouth'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-1-1',
+      participantId: 'p-1',
+      participantName: 'Sarah Chen',
+      name: 'Sertraline',
+      dosage: '50mg',
+      prescriber: 'Dr. John Smith',
+      type: 'regular',
+      schedule: [
+        { time: '18:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Nausea', 'Headache'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-1-2',
+      participantId: 'p-1',
+      participantName: 'Sarah Chen',
+      name: 'Melatonin',
+      dosage: '3mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '00:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take before bed',
+      sideEffects: ['Drowsiness'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-1-3',
+      participantId: 'p-1',
+      participantName: 'Sarah Chen',
+      name: 'Ondansetron',
+      dosage: '4mg',
+      prescriber: 'Dr. John Smith',
+      type: 'prn',
+      schedule: [],
+      instructions: 'As needed for nausea and vomiting',
+      sideEffects: ['Headache', 'Constipation'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    }
+  )
+
+  // Michael Brown - Risperidone (regular), Melatonin (regular), Buscopan (PRN)
+  medications.push(
+    {
+      id: 'med-2-0',
+      participantId: 'p-2',
+      participantName: 'Michael Brown',
+      name: 'Risperidone',
+      dosage: '2mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+        { time: '18:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Drowsiness', 'Dry mouth'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-2-1',
+      participantId: 'p-2',
+      participantName: 'Michael Brown',
+      name: 'Melatonin',
+      dosage: '3mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '00:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take before bed',
+      sideEffects: ['Drowsiness'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-2-2',
+      participantId: 'p-2',
+      participantName: 'Michael Brown',
+      name: 'Buscopan',
+      dosage: '10mg',
+      prescriber: 'Dr. John Smith',
+      type: 'prn',
+      schedule: [],
+      instructions: 'As needed for abdominal cramps',
+      sideEffects: ['Dry mouth', 'Blurred vision'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    }
+  )
+
+  // Emma Wilson - Sertraline (regular), Paracetamol (PRN)
+  medications.push(
+    {
+      id: 'med-3-0',
+      participantId: 'p-3',
+      participantName: 'Emma Wilson',
+      name: 'Sertraline',
+      dosage: '50mg',
+      prescriber: 'Dr. John Smith',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+        { time: '18:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Nausea', 'Headache'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-3-1',
+      participantId: 'p-3',
+      participantName: 'Emma Wilson',
+      name: 'Melatonin',
+      dosage: '3mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '00:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take before bed',
+      sideEffects: ['Drowsiness'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-3-2',
+      participantId: 'p-3',
+      participantName: 'Emma Wilson',
+      name: 'Paracetamol',
+      dosage: '500mg',
+      prescriber: 'Dr. John Smith',
+      type: 'prn',
+      schedule: [],
+      instructions: 'As needed for headache or pain',
+      sideEffects: ['Rare: Skin rash'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    }
+  )
+
+  // David Lee - Risperidone (regular), Lorazepam (PRN)
+  medications.push(
+    {
+      id: 'med-4-0',
+      participantId: 'p-4',
+      participantName: 'David Lee',
+      name: 'Risperidone',
+      dosage: '2mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Drowsiness', 'Dry mouth'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-4-1',
+      participantId: 'p-4',
+      participantName: 'David Lee',
+      name: 'Lorazepam',
+      dosage: '1mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'prn',
+      schedule: [],
+      instructions: 'As needed for anxiety',
+      sideEffects: ['Drowsiness', 'Dizziness'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    }
+  )
+
+  // Lisa Thompson - Risperidone (regular), Sertraline (regular)
+  medications.push(
+    {
+      id: 'med-5-0',
+      participantId: 'p-5',
+      participantName: 'Lisa Thompson',
+      name: 'Risperidone',
+      dosage: '2mg',
+      prescriber: 'Dr. Sarah Kim',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Drowsiness', 'Dry mouth'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    },
+    {
+      id: 'med-5-1',
+      participantId: 'p-5',
+      participantName: 'Lisa Thompson',
+      name: 'Sertraline',
+      dosage: '50mg',
+      prescriber: 'Dr. John Smith',
+      type: 'regular',
+      schedule: [
+        { time: '08:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }
+      ],
+      instructions: 'Take with food',
+      sideEffects: ['Nausea', 'Headache'],
+      startDate: new Date(2024, 0, 1),
+      active: true
+    }
+  )
 
   return medications
 }
 
-// Generate today's administrations
+// Generate comprehensive administrations including history from previous shifts
 const generateAdministrations = (medications: Medication[]): MedicationAdministration[] => {
   const administrations: MedicationAdministration[] = []
   const today = new Date()
-  
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  const twoDaysAgo = new Date(today)
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+
+  // Staff members for different shifts
+  const staffMembers = [
+    { name: 'Bernard Adjei', shift: 'day' },        // 7AM-3PM
+    { name: 'Emily Chen', shift: 'evening' },       // 3PM-11PM
+    { name: 'Tom Anderson', shift: 'night' }        // 11PM-7AM
+  ]
+
+  // Shift times: Morning (8AM), Afternoon (12PM), Evening (6PM), Night (12AM/midnight)
+  const shiftSchedules = [
+    { time: '08:00', label: 'Morning', staff: 'Bernard Adjei' },
+    { time: '12:00', label: 'Afternoon', staff: 'Bernard Adjei' },
+    { time: '18:00', label: 'Evening', staff: 'Emily Chen' },
+    { time: '00:00', label: 'Night', staff: 'Tom Anderson' }
+  ]
+
+  // Generate today's administrations
   medications.forEach(med => {
     if (med.type === 'regular') {
       med.schedule.forEach(schedule => {
         const [hour, minute] = schedule.time.split(':').map(Number)
         const scheduledTime = new Date(today)
         scheduledTime.setHours(hour, minute, 0, 0)
-        
+
         const isPast = scheduledTime < new Date()
-        const status = isPast 
+        const status = isPast
           ? Math.random() > 0.1 ? 'administered' : 'missed'
           : 'pending'
-        
+
+        // Determine staff based on time
+        let staffName = 'Bernard Adjei'
+        if (hour >= 15 && hour < 23) staffName = 'Emily Chen'
+        else if (hour >= 23 || hour < 7) staffName = 'Tom Anderson'
+
         administrations.push({
-          id: `admin-${med.id}-${schedule.time}`,
+          id: `admin-${med.id}-${schedule.time}-today`,
           medicationId: med.id,
           participantId: med.participantId,
           scheduledTime,
           administeredTime: status === 'administered' ? scheduledTime : undefined,
-          administeredBy: status === 'administered' ? 'Bernard Adjei' : undefined,
+          administeredBy: status === 'administered' ? staffName : undefined,
           status,
-          notes: status === 'administered' ? 'Given with breakfast' : undefined
+          notes: status === 'administered' ? `${schedule.time.startsWith('08') ? 'Given with breakfast' : schedule.time.startsWith('12') ? 'Given with lunch' : schedule.time.startsWith('18') ? 'Given with dinner' : 'Bedtime medication'}` : undefined
         })
       })
     }
   })
-  
+
+  // Generate yesterday's full history (Oct 5, 2025)
+  medications.forEach(med => {
+    if (med.type === 'regular') {
+      // Morning medications - 8:00 AM (Bernard Adjei)
+      const morningTime = new Date(yesterday)
+      morningTime.setHours(8, 0, 0, 0)
+      administrations.push({
+        id: `admin-${med.id}-yesterday-morning`,
+        medicationId: med.id,
+        participantId: med.participantId,
+        scheduledTime: morningTime,
+        administeredTime: morningTime,
+        administeredBy: 'Bernard Adjei',
+        status: 'administered',
+        notes: 'Given with breakfast'
+      })
+
+      // Afternoon medications - 12:00 PM (Bernard Adjei)
+      if (Math.random() > 0.3) {
+        const afternoonTime = new Date(yesterday)
+        afternoonTime.setHours(12, 0, 0, 0)
+        administrations.push({
+          id: `admin-${med.id}-yesterday-afternoon`,
+          medicationId: med.id,
+          participantId: med.participantId,
+          scheduledTime: afternoonTime,
+          administeredTime: afternoonTime,
+          administeredBy: 'Bernard Adjei',
+          status: 'administered',
+          notes: 'Lunch time dose'
+        })
+      }
+
+      // Evening medications - 6:00 PM (Emily Chen)
+      const eveningTime = new Date(yesterday)
+      eveningTime.setHours(18, 0, 0, 0)
+      administrations.push({
+        id: `admin-${med.id}-yesterday-evening`,
+        medicationId: med.id,
+        participantId: med.participantId,
+        scheduledTime: eveningTime,
+        administeredTime: eveningTime,
+        administeredBy: 'Emily Chen',
+        status: 'administered',
+        notes: 'Given with evening meal'
+      })
+
+      // Night medications - 12:00 AM midnight (Tom Anderson)
+      if (med.participantName.includes('James') || med.participantName.includes('Sarah') || med.participantName.includes('Michael')) {
+        const nightTime = new Date(today)
+        nightTime.setHours(0, 0, 0, 0)
+        administrations.push({
+          id: `admin-${med.id}-last-night`,
+          medicationId: med.id,
+          participantId: med.participantId,
+          scheduledTime: nightTime,
+          administeredTime: nightTime,
+          administeredBy: 'Tom Anderson',
+          status: 'administered',
+          notes: 'Bedtime medication'
+        })
+      }
+    }
+  })
+
+  // Generate 2 days ago history (Oct 4, 2025) - partial
+  medications.forEach(med => {
+    if (med.type === 'regular' && Math.random() > 0.3) {
+      // Morning medications
+      const morningTime = new Date(twoDaysAgo)
+      morningTime.setHours(8, 0, 0, 0)
+      administrations.push({
+        id: `admin-${med.id}-two-days-morning`,
+        medicationId: med.id,
+        participantId: med.participantId,
+        scheduledTime: morningTime,
+        administeredTime: morningTime,
+        administeredBy: 'Bernard Adjei',
+        status: 'administered',
+        notes: 'Morning dose administered'
+      })
+
+      // Evening medications
+      const eveningTime = new Date(twoDaysAgo)
+      eveningTime.setHours(18, 0, 0, 0)
+      administrations.push({
+        id: `admin-${med.id}-two-days-evening`,
+        medicationId: med.id,
+        participantId: med.participantId,
+        scheduledTime: eveningTime,
+        administeredTime: eveningTime,
+        administeredBy: 'Emily Chen',
+        status: 'administered',
+        notes: 'Evening dose given'
+      })
+    }
+  })
+
   return administrations
+}
+
+// Generate Webster Pack slots for today
+const generateWebsterPacks = (medications: Medication[]): WebsterPackSlot[] => {
+  const websterSlots: WebsterPackSlot[] = []
+  const today = new Date()
+
+  // Only use participants from current shift (first 3)
+  const shiftParticipants = ['James Mitchell', 'Sarah Chen', 'Michael Brown']
+
+  const sessions = [
+    { time: 'Morning' as const, hour: 8, minute: 0 },
+    { time: 'Afternoon' as const, hour: 12, minute: 0 },
+    { time: 'Evening' as const, hour: 18, minute: 0 },
+    { time: 'Night' as const, hour: 22, minute: 0 }
+  ]
+
+  shiftParticipants.forEach(participantName => {
+    sessions.forEach(session => {
+      const scheduledTime = new Date(today)
+      scheduledTime.setHours(session.hour, session.minute, 0, 0)
+
+      // Generate medications for this slot
+      const slotMedications = []
+      const numMeds = Math.floor(Math.random() * 3) + 1 // 1-3 medications per slot
+
+      const medicationPool = [
+        { name: 'Risperidone', dosage: '2mg', pillCount: 1 },
+        { name: 'Sertraline', dosage: '50mg', pillCount: 1 },
+        { name: 'Metformin', dosage: '500mg', pillCount: 2 },
+        { name: 'Vitamin D', dosage: '1000IU', pillCount: 1 },
+        { name: 'Aspirin', dosage: '100mg', pillCount: 1 }
+      ]
+
+      for (let i = 0; i < numMeds; i++) {
+        const med = medicationPool[Math.floor(Math.random() * medicationPool.length)]
+        slotMedications.push({ ...med })
+      }
+
+      const totalPills = slotMedications.reduce((sum, med) => sum + med.pillCount, 0)
+
+      // Determine status based on time
+      const isPast = scheduledTime < new Date()
+      const status = isPast
+        ? Math.random() > 0.15 ? 'administered' : 'missed'
+        : 'pending'
+
+      websterSlots.push({
+        id: `webster-${participantName}-${session.time}`,
+        participantName,
+        sessionTime: session.time,
+        medications: slotMedications,
+        totalPills,
+        status,
+        scheduledTime
+      })
+    })
+  })
+
+  return websterSlots
 }
 
 export default function MedicationsPage() {
@@ -153,14 +620,18 @@ export default function MedicationsPage() {
   const [prnReason, setPrnReason] = useState('')
   const [prnMedication, setPrnMedication] = useState<Medication | null>(null)
   const [inventory, setInventory] = useState<Map<string, number>>(new Map())
+  const [websterPacks, setWebsterPacks] = useState<WebsterPackSlot[]>([])
+  const [lastPharmacySync, setLastPharmacySync] = useState<Date>(new Date(Date.now() - 2 * 60 * 60 * 1000))
 
   useEffect(() => {
     // Generate mock data
     const meds = generateMedications()
     const admins = generateAdministrations(meds)
+    const packs = generateWebsterPacks(meds)
     setMedications(meds)
     setAdministrations(admins)
-    
+    setWebsterPacks(packs)
+
     // Generate mock inventory
     const mockInventory = new Map<string, number>()
     const uniqueMeds = Array.from(new Set(meds.map(m => m.name)))
@@ -168,26 +639,54 @@ export default function MedicationsPage() {
       mockInventory.set(medName, Math.floor(Math.random() * 200) + 50)
     })
     setInventory(mockInventory)
-    
+
     setLoading(false)
   }, [])
 
   const getPendingCount = () => {
-    return administrations.filter(a => a.status === 'pending').length
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    return administrations.filter(a =>
+      a.status === 'pending' &&
+      a.scheduledTime >= today &&
+      a.scheduledTime < tomorrow
+    ).length
   }
 
   const getMissedCount = () => {
-    return administrations.filter(a => a.status === 'missed').length
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    return administrations.filter(a =>
+      a.status === 'missed' &&
+      a.scheduledTime >= today &&
+      a.scheduledTime < tomorrow
+    ).length
   }
 
   const getComplianceRate = () => {
-    const completed = administrations.filter(a => 
-      a.status === 'administered' || a.status === 'pending'
-    ).length
-    const total = administrations.filter(a => 
-      a.scheduledTime < new Date()
-    ).length
-    return total > 0 ? Math.round((completed / total) * 100) : 100
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const now = new Date()
+
+    // Only count doses that were due (scheduled time has passed)
+    const dueTodayAdmins = administrations.filter(a =>
+      a.scheduledTime >= today &&
+      a.scheduledTime < tomorrow &&
+      a.scheduledTime < now  // Only doses that were actually due
+    )
+
+    const administered = dueTodayAdmins.filter(a => a.status === 'administered').length
+    const total = dueTodayAdmins.length
+
+    return total > 0 ? Math.round((administered / total) * 100) : 0
   }
 
   const handleAdminister = (admin: MedicationAdministration) => {
@@ -254,6 +753,44 @@ export default function MedicationsPage() {
     }
   }
 
+  const handleWebsterPackAdmin = (slotId: string) => {
+    setWebsterPacks(prev => prev.map(slot =>
+      slot.id === slotId
+        ? {
+            ...slot,
+            status: 'administered',
+            scheduledTime: new Date()
+          }
+        : slot
+    ))
+
+    const slot = websterPacks.find(s => s.id === slotId)
+    if (slot) {
+      toast({
+        title: 'Webster Pack Administered',
+        description: `${slot.sessionTime} medications given to ${slot.participantName}`
+      })
+    }
+  }
+
+  const getSessionIcon = (sessionTime: string) => {
+    const now = new Date()
+    const hour = now.getHours()
+
+    switch (sessionTime) {
+      case 'Morning':
+        return hour >= 8 ? '☀️' : '🌅'
+      case 'Afternoon':
+        return '🌤️'
+      case 'Evening':
+        return '🌆'
+      case 'Night':
+        return '🌙'
+      default:
+        return '💊'
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -295,7 +832,18 @@ export default function MedicationsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {administrations.filter(a => a.status === 'administered').length}
+                  {(() => {
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    const tomorrow = new Date(today)
+                    tomorrow.setDate(tomorrow.getDate() + 1)
+
+                    return administrations.filter(a =>
+                      a.status === 'administered' &&
+                      a.scheduledTime >= today &&
+                      a.scheduledTime < tomorrow
+                    ).length
+                  })()}
                 </div>
                 <p className="text-sm text-gray-500">Completed today</p>
               </CardContent>
@@ -329,6 +877,10 @@ export default function MedicationsPage() {
             </TabsTrigger>
             <TabsTrigger value="medications">All Medications</TabsTrigger>
             <TabsTrigger value="prn">PRN Medications</TabsTrigger>
+            <TabsTrigger value="webster">
+              <Package className="h-4 w-4 mr-2" />
+              Webster Packs
+            </TabsTrigger>
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
@@ -574,9 +1126,11 @@ export default function MedicationsPage() {
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { participant: 'James Mitchell', medication: 'Lorazepam 1mg', time: '2:45 PM', reason: 'Anxiety during group activity', staff: 'Bernard Adjei' },
+                    { participant: 'James Mitchell', medication: 'Ibuprofen 400mg', time: '2:45 PM', reason: 'Joint pain complaint', staff: 'Bernard Adjei' },
                     { participant: 'Emma Wilson', medication: 'Paracetamol 500mg', time: '11:30 AM', reason: 'Headache complaint', staff: 'Tom Anderson' },
-                    { participant: 'Michael Brown', medication: 'Lorazepam 1mg', time: '9:15 AM', reason: 'Pre-appointment anxiety', staff: 'Emily Chen' }
+                    { participant: 'Michael Brown', medication: 'Buscopan 10mg', time: '9:15 AM', reason: 'Abdominal cramps', staff: 'Emily Chen' },
+                    { participant: 'David Lee', medication: 'Lorazepam 1mg', time: '7:20 AM', reason: 'Morning anxiety episode', staff: 'Bernard Adjei' },
+                    { participant: 'Sarah Chen', medication: 'Ondansetron 4mg', time: 'Yesterday 8:30 PM', reason: 'Nausea after dinner', staff: 'Emily Chen' }
                   ].map((prn, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                       <div>
@@ -591,6 +1145,168 @@ export default function MedicationsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Webster Packs Tab */}
+          <TabsContent value="webster" className="space-y-6">
+            {/* Pharmacy Sync Status */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded">
+                      <Package className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="font-medium">Pharmacy Sync Status</div>
+                      <div className="text-sm text-gray-500">
+                        Last synced: {Math.floor((Date.now() - lastPharmacySync.getTime()) / (1000 * 60 * 60))} hours ago
+                      </div>
+                    </div>
+                  </div>
+                  <Badge className="bg-green-100 text-green-800">Synced</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Today's Webster Pack Sessions */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Today's Medication Sessions</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Webster pack medications organized by timing slot for current shift participants
+              </p>
+
+              {/* Group by session time */}
+              {['Morning', 'Afternoon', 'Evening', 'Night'].map(sessionTime => {
+                const sessionSlots = websterPacks.filter(slot => slot.sessionTime === sessionTime)
+                const sessionScheduledTime = sessionSlots[0]?.scheduledTime
+
+                if (sessionSlots.length === 0) return null
+
+                return (
+                  <div key={sessionTime} className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">{getSessionIcon(sessionTime)}</span>
+                      <h4 className="text-lg font-medium">{sessionTime}</h4>
+                      <span className="text-sm text-gray-500">
+                        {sessionScheduledTime && format(sessionScheduledTime, 'h:mm a')}
+                      </span>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {sessionSlots.map(slot => (
+                        <Card key={slot.id} className={
+                          slot.status === 'administered' ? 'border-green-200 bg-green-50' :
+                          slot.status === 'missed' ? 'border-red-200 bg-red-50' :
+                          'border-gray-200'
+                        }>
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-base">{slot.participantName}</CardTitle>
+                              {slot.status === 'administered' ? (
+                                <Badge className="bg-green-100 text-green-800">Administered</Badge>
+                              ) : slot.status === 'missed' ? (
+                                <Badge variant="destructive">Missed</Badge>
+                              ) : slot.status === 'refused' ? (
+                                <Badge className="bg-orange-100 text-orange-800">Refused</Badge>
+                              ) : (
+                                <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-3">
+                              {/* Medications List */}
+                              <div className="space-y-2">
+                                {slot.medications.map((med, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <Pill className="h-3 w-3 text-gray-400" />
+                                      <span>{med.name}</span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {med.dosage}
+                                      </Badge>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {med.pillCount} pill{med.pillCount > 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Total Pills Count */}
+                              <div className="pt-3 border-t">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-700">
+                                    Total Expected Pills:
+                                  </span>
+                                  <span className="text-lg font-bold text-blue-600">
+                                    {slot.totalPills}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Verify pill count before administration
+                                </p>
+                              </div>
+
+                              {/* Administration Button */}
+                              {slot.status === 'pending' && (
+                                <Button
+                                  className="w-full mt-2"
+                                  onClick={() => handleWebsterPackAdmin(slot.id)}
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  Mark as Administered
+                                </Button>
+                              )}
+
+                              {slot.status === 'administered' && (
+                                <div className="text-sm text-gray-600 mt-2 p-2 bg-white rounded">
+                                  <CheckCircle2 className="h-4 w-4 text-green-600 inline mr-1" />
+                                  Given by {currentUser?.name || 'Staff'}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Webster Pack Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Webster Pack Information</CardTitle>
+                <CardDescription>
+                  NDIS medication management system for weekly medication organization
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <div>
+                      <span className="font-medium">Pill Count Verification:</span> Always verify the total pill count matches the expected count before administration to catch pharmacy packing errors.
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <div>
+                      <span className="font-medium">Session Times:</span> Morning (8:00 AM), Afternoon (12:00 PM), Evening (6:00 PM), Night (10:00 PM)
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <div>
+                      <span className="font-medium">Current Shift:</span> Only participants in the current shift are displayed.
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -715,36 +1431,97 @@ export default function MedicationsPage() {
 
           {/* History Tab */}
           <TabsContent value="history" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Total Administered (48hrs)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    {administrations.filter(a => a.status === 'administered' && a.scheduledTime > new Date(Date.now() - 48 * 60 * 60 * 1000)).length}
+                  </div>
+                  <p className="text-sm text-gray-500">Across all shifts</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Last Night Shift</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {administrations.filter(a => a.administeredBy === 'Tom Anderson' && a.scheduledTime > new Date(Date.now() - 24 * 60 * 60 * 1000)).length}
+                  </div>
+                  <p className="text-sm text-gray-500">By Tom Anderson</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Evening Shift</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {administrations.filter(a => a.administeredBy === 'Emily Chen' && a.scheduledTime > new Date(Date.now() - 24 * 60 * 60 * 1000)).length}
+                  </div>
+                  <p className="text-sm text-gray-500">By Emily Chen</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Administration History List */}
             <Card>
               <CardHeader>
                 <CardTitle>Administration History</CardTitle>
-                <CardDescription>Recent medication administrations</CardDescription>
+                <CardDescription>Complete medication administration records from recent shifts</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {administrations
                     .filter(a => a.status !== 'pending')
                     .sort((a, b) => b.scheduledTime.getTime() - a.scheduledTime.getTime())
-                    .slice(0, 10)
+                    .slice(0, 30)
                     .map(admin => {
                       const medication = medications.find(m => m.id === admin.medicationId)
                       if (!medication) return null
 
+                      // Determine shift badge color based on staff
+                      const getShiftBadge = (staffName?: string) => {
+                        if (staffName === 'Tom Anderson') return <Badge className="bg-indigo-100 text-indigo-800">Night Shift</Badge>
+                        if (staffName === 'Emily Chen') return <Badge className="bg-purple-100 text-purple-800">Evening Shift</Badge>
+                        if (staffName === 'Bernard Adjei') return <Badge className="bg-blue-100 text-blue-800">Day Shift</Badge>
+                        return <Badge variant="outline">Unknown</Badge>
+                      }
+
                       return (
-                        <div key={admin.id} className="flex items-center justify-between p-4 border rounded">
-                          <div>
-                            <div className="font-medium">
-                              {medication.participantName} - {medication.name} {medication.dosage}
+                        <div key={admin.id} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">{medication.participantName}</span>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-sm text-gray-600">{medication.name} {medication.dosage}</span>
                             </div>
-                            <div className="text-sm text-gray-500">
-                              Scheduled: {format(admin.scheduledTime, 'MMM d, h:mm a')}
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {format(admin.scheduledTime, 'MMM d, yyyy · h:mm a')}
+                              </span>
+                              {admin.notes && (
+                                <>
+                                  <span className="text-gray-400">•</span>
+                                  <span>{admin.notes}</span>
+                                </>
+                              )}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="flex items-center gap-3">
+                            {getShiftBadge(admin.administeredBy)}
                             {getStatusBadge(admin.status)}
                             {admin.administeredBy && (
-                              <div className="text-sm text-gray-500 mt-1">
-                                {admin.administeredBy}
+                              <div className="text-right min-w-[100px]">
+                                <div className="text-xs font-medium text-gray-700">{admin.administeredBy}</div>
+                                <div className="text-xs text-gray-500">
+                                  {admin.administeredTime && format(admin.administeredTime, 'h:mm a')}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -752,6 +1529,15 @@ export default function MedicationsPage() {
                       )
                     })}
                 </div>
+
+                {administrations.filter(a => a.status !== 'pending').length > 30 && (
+                  <div className="mt-4 text-center">
+                    <Button variant="outline">
+                      Load More History
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -15,9 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/components/hooks/use-toast'
 import { useStore } from '@/lib/store'
-import { DataService } from '@/lib/data/service'
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, addHours } from 'date-fns'
-import { 
+import { SupabaseService } from '@/lib/supabase/service'
+import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns'
+import {
   Clock, Calendar as CalendarIcon, Users, AlertCircle,
   ChevronLeft, ChevronRight, Plus, Edit2, Trash2,
   CheckCircle2, Play, Pause, X, FileText, ArrowRight,
@@ -38,6 +38,8 @@ interface Shift {
   handoverNotes?: string
   actualStart?: string
   actualEnd?: string
+  assignedBy?: string
+  coWorkers?: string[]  // Names of other staff working the same shift
 }
 
 interface HandoverNote {
@@ -50,80 +52,24 @@ interface HandoverNote {
   acknowledged: boolean
 }
 
-// Mock shift data
-const generateShifts = (): Shift[] => {
-  const shifts: Shift[] = []
-  const staff = [
-    { id: '1', name: 'Bernard Adjei', role: 'Support Worker' },
-    { id: '2', name: 'Tom Anderson', role: 'Team Leader' },
-    { id: '3', name: 'Emily Chen', role: 'Support Worker' },
-    { id: '4', name: 'Mark Williams', role: 'Support Worker' },
-    { id: '5', name: 'Lisa Brown', role: 'Nurse' }
-  ]
-  const facilities = [
-    { id: 'f1', name: 'House 1 - Riverside' },
-    { id: 'f2', name: 'House 2 - Parkview' },
-    { id: 'f3', name: 'House 3 - Sunshine' }
-  ]
-
-  // Generate shifts for the next 7 days
-  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-    const date = addDays(new Date(), dayOffset)
-    
-    // Morning shifts (6 AM - 2 PM)
-    facilities.forEach((facility, fIndex) => {
-      const staffIndex = (dayOffset + fIndex) % staff.length
-      shifts.push({
-        id: `shift-${dayOffset}-${fIndex}-morning`,
-        staffId: staff[staffIndex].id,
-        staffName: staff[staffIndex].name,
-        staffRole: staff[staffIndex].role,
-        facilityId: facility.id,
-        facilityName: facility.name,
-        date,
-        startTime: '06:00',
-        endTime: '14:00',
-        status: dayOffset === 0 ? 'active' : 'scheduled'
-      })
-    })
-
-    // Afternoon shifts (2 PM - 10 PM)
-    facilities.forEach((facility, fIndex) => {
-      const staffIndex = (dayOffset + fIndex + 2) % staff.length
-      shifts.push({
-        id: `shift-${dayOffset}-${fIndex}-afternoon`,
-        staffId: staff[staffIndex].id,
-        staffName: staff[staffIndex].name,
-        staffRole: staff[staffIndex].role,
-        facilityId: facility.id,
-        facilityName: facility.name,
-        date,
-        startTime: '14:00',
-        endTime: '22:00',
-        status: 'scheduled'
-      })
-    })
-
-    // Night shifts (10 PM - 6 AM)
-    facilities.forEach((facility, fIndex) => {
-      const staffIndex = (dayOffset + fIndex + 4) % staff.length
-      shifts.push({
-        id: `shift-${dayOffset}-${fIndex}-night`,
-        staffId: staff[staffIndex].id,
-        staffName: staff[staffIndex].name,
-        staffRole: staff[staffIndex].role,
-        facilityId: facility.id,
-        facilityName: facility.name,
-        date,
-        startTime: '22:00',
-        endTime: '06:00',
-        status: 'scheduled'
-      })
-    })
-  }
-
-  return shifts
-}
+// Helper to map Supabase shift data to Shift interface
+const mapSupabaseShift = (dbShift: any): Shift => ({
+  id: dbShift.id,
+  staffId: dbShift.staff_id,
+  staffName: dbShift.staff_name,
+  staffRole: dbShift.staff_role,
+  facilityId: dbShift.facility_id,
+  facilityName: dbShift.facility_name,
+  date: parseISO(dbShift.shift_date),
+  startTime: dbShift.start_time.substring(0, 5), // Convert '07:00:00' to '07:00'
+  endTime: dbShift.end_time.substring(0, 5),
+  status: dbShift.status,
+  handoverNotes: dbShift.handover_notes,
+  actualStart: dbShift.actual_start_time ? format(parseISO(dbShift.actual_start_time), 'HH:mm') : undefined,
+  actualEnd: dbShift.actual_end_time ? format(parseISO(dbShift.actual_end_time), 'HH:mm') : undefined,
+  assignedBy: dbShift.assigned_by_name,
+  coWorkers: dbShift.co_worker_names || []
+})
 
 export default function ShiftsPage() {
   const router = useRouter()
@@ -144,10 +90,39 @@ export default function ShiftsPage() {
   })
 
   useEffect(() => {
-    // Generate mock shifts
-    setShifts(generateShifts())
-    setLoading(false)
-  }, [])
+    loadShifts()
+  }, [selectedDate, selectedFacility])
+
+  const loadShifts = async () => {
+    setLoading(true)
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd')
+      const startDate = format(addDays(selectedDate, -3), 'yyyy-MM-dd')
+      const endDate = format(addDays(selectedDate, 10), 'yyyy-MM-dd')
+
+      // Fetch shifts for a range around the selected date
+      const dbShifts = await SupabaseService.getShiftsByDateRange(startDate, endDate)
+
+      // Map to our Shift interface
+      const mappedShifts = dbShifts.map(mapSupabaseShift)
+
+      // Filter by facility if selected
+      const filteredShifts = selectedFacility === 'all'
+        ? mappedShifts
+        : mappedShifts.filter(s => s.facilityId === selectedFacility)
+
+      setShifts(filteredShifts)
+    } catch (error) {
+      console.error('Error loading shifts:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load shifts from database',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getShiftsForDate = (date: Date) => {
     return shifts.filter(shift => isSameDay(shift.date, date))
@@ -161,17 +136,30 @@ export default function ShiftsPage() {
     )
   }
 
-  const startShift = (shift: Shift) => {
-    const now = format(new Date(), 'HH:mm')
-    setShifts(prev => prev.map(s => 
-      s.id === shift.id 
-        ? { ...s, status: 'active' as const, actualStart: now }
-        : s
-    ))
-    toast({
-      title: 'Shift Started',
-      description: `Your shift at ${shift.facilityName} has started`
-    })
+  const startShift = async (shift: Shift) => {
+    try {
+      await SupabaseService.clockIn(shift.id, currentUser?.id || '')
+
+      // Update local state
+      const now = format(new Date(), 'HH:mm')
+      setShifts(prev => prev.map(s =>
+        s.id === shift.id
+          ? { ...s, status: 'active' as const, actualStart: now }
+          : s
+      ))
+
+      toast({
+        title: 'Shift Started',
+        description: `Your shift at ${shift.facilityName} has started`
+      })
+    } catch (error) {
+      console.error('Error starting shift:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to clock in to shift',
+        variant: 'destructive'
+      })
+    }
   }
 
   const endShift = (shift: Shift) => {
@@ -179,29 +167,49 @@ export default function ShiftsPage() {
     setShowHandoverDialog(true)
   }
 
-  const submitHandover = () => {
+  const submitHandover = async () => {
     if (!activeHandover) return
 
-    const now = format(new Date(), 'HH:mm')
-    setShifts(prev => prev.map(s => 
-      s.id === activeHandover.id 
-        ? { 
-            ...s, 
-            status: 'completed' as const, 
-            actualEnd: now,
-            handoverNotes: handoverNotes.generalNotes
-          }
-        : s
-    ))
+    try {
+      // Filter out empty critical info
+      const criticalInfo = handoverNotes.criticalInfo.filter(info => info.trim() !== '')
 
-    toast({
-      title: 'Shift Completed',
-      description: 'Handover notes have been saved'
-    })
+      await SupabaseService.clockOut(
+        activeHandover.id,
+        currentUser?.id || '',
+        handoverNotes.generalNotes,
+        criticalInfo.length > 0 ? criticalInfo : undefined
+      )
 
-    setShowHandoverDialog(false)
-    setActiveHandover(null)
-    setHandoverNotes({ criticalInfo: [''], generalNotes: '' })
+      // Update local state
+      const now = format(new Date(), 'HH:mm')
+      setShifts(prev => prev.map(s =>
+        s.id === activeHandover.id
+          ? {
+              ...s,
+              status: 'completed' as const,
+              actualEnd: now,
+              handoverNotes: handoverNotes.generalNotes
+            }
+          : s
+      ))
+
+      toast({
+        title: 'Shift Completed',
+        description: 'Handover notes have been saved'
+      })
+
+      setShowHandoverDialog(false)
+      setActiveHandover(null)
+      setHandoverNotes({ criticalInfo: [''], generalNotes: '' })
+    } catch (error) {
+      console.error('Error completing shift:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to clock out from shift',
+        variant: 'destructive'
+      })
+    }
   }
 
   const addCriticalInfo = () => {
@@ -226,9 +234,9 @@ export default function ShiftsPage() {
   }
 
   const getShiftsByTime = (shifts: Shift[]) => {
-    const morning = shifts.filter(s => s.startTime === '06:00')
-    const afternoon = shifts.filter(s => s.startTime === '14:00')
-    const night = shifts.filter(s => s.startTime === '22:00')
+    const morning = shifts.filter(s => s.startTime === '07:00')
+    const afternoon = shifts.filter(s => s.startTime === '15:00')
+    const night = shifts.filter(s => s.startTime === '23:00')
     return { morning, afternoon, night }
   }
 
@@ -388,7 +396,7 @@ export default function ShiftsPage() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Clock className="h-5 w-5" />
-                          Morning Shifts (6 AM - 2 PM)
+                          Morning Shifts (7 AM - 3 PM)
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -443,7 +451,7 @@ export default function ShiftsPage() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Clock className="h-5 w-5" />
-                          Afternoon Shifts (2 PM - 10 PM)
+                          Afternoon Shifts (3 PM - 11 PM)
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -498,7 +506,7 @@ export default function ShiftsPage() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Clock className="h-5 w-5" />
-                          Night Shifts (10 PM - 6 AM)
+                          Night Shifts (11 PM - 7 AM)
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -742,9 +750,9 @@ export default function ShiftsPage() {
                       <SelectValue placeholder="Select shift" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="morning">Morning (6:00 - 14:00)</SelectItem>
-                      <SelectItem value="afternoon">Afternoon (14:00 - 22:00)</SelectItem>
-                      <SelectItem value="night">Night (22:00 - 6:00)</SelectItem>
+                      <SelectItem value="morning">Morning (07:00 - 15:00)</SelectItem>
+                      <SelectItem value="afternoon">Afternoon (15:00 - 23:00)</SelectItem>
+                      <SelectItem value="night">Night (23:00 - 07:00)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -25,6 +25,7 @@ export default function LoginPage() {
 
   const demoAccounts = [
     { role: "Support Worker", email: "bernard.adjei@maxlifecare.com.au", description: "Frontline staff view" },
+    { role: "Support Worker", email: "akua@maxlifecare.com.au", description: "Frontline staff view" },
     { role: "Team Leader", email: "tom.anderson@maxlifecare.com.au", description: "Supervisory dashboard" },
     { role: "Clinical Manager", email: "dr.kim@maxlifecare.com.au", description: "Clinical insights" },
     { role: "Area Manager", email: "lisa.park@maxlifecare.com.au", description: "Regional oversight" }

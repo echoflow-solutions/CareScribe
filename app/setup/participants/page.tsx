@@ -463,37 +463,60 @@ export default function ParticipantsSetupPage() {
           </CardContent>
         </Card>
 
-        {/* Participants Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Participants Grid - Enhanced with Rich Information */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
           {filteredParticipants.map((participant) => (
-            <Card key={participant.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback>
-                        {participant.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-lg">{participant.name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge 
-                          variant={participant.riskLevel === 'high' ? 'destructive' : 
+            <Card
+              key={participant.id}
+              className={`hover:shadow-xl transition-all border-l-4 ${
+                participant.riskLevel === 'high' ? 'border-l-red-500' :
+                participant.riskLevel === 'medium' ? 'border-l-yellow-500' :
+                'border-l-green-500'
+              }`}
+            >
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="relative flex-shrink-0">
+                      <Avatar className="h-16 w-16 border-2 border-gray-200">
+                        <AvatarFallback className="text-xl font-semibold bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                          {participant.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className={`absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full border-2 border-white ${
+                        participant.currentStatus === 'happy' ? 'bg-green-500' :
+                        participant.currentStatus === 'calm' ? 'bg-blue-500' :
+                        participant.currentStatus === 'anxious' ? 'bg-yellow-500' :
+                        participant.currentStatus === 'agitated' ? 'bg-red-500' :
+                        'bg-gray-500'
+                      }`} title={participant.currentStatus} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg font-bold truncate mb-1">{participant.name}</CardTitle>
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                        {participant.age && <span>{participant.age} years old</span>}
+                        {participant.age && participant.ndisNumber && <span>•</span>}
+                        {participant.ndisNumber && <span className="truncate">NDIS {participant.ndisNumber?.slice(-4)}</span>}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                          variant={participant.riskLevel === 'high' ? 'destructive' :
                                   participant.riskLevel === 'medium' ? 'default' : 'secondary'}
+                          className="text-xs px-2.5 py-0.5"
                         >
                           {participant.riskLevel} risk
                         </Badge>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs px-2.5 py-0.5 capitalize">
                           {participant.currentStatus}
                         </Badge>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button
                       size="icon"
                       variant="ghost"
+                      className="h-9 w-9"
                       onClick={() => handleEdit(participant)}
                     >
                       <Edit2 className="h-4 w-4" />
@@ -501,6 +524,7 @@ export default function ParticipantsSetupPage() {
                     <Button
                       size="icon"
                       variant="ghost"
+                      className="h-9 w-9"
                       onClick={() => handleDelete(participant.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -508,28 +532,93 @@ export default function ParticipantsSetupPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Home className="h-4 w-4" />
-                  <span>Facility {participant.facility}</span>
+
+              <CardContent className="space-y-3 pt-0">
+                {/* Location */}
+                <div className="flex items-center gap-2.5 text-sm text-gray-700 bg-gray-50 px-3 py-2.5 rounded-lg">
+                  <Home className="h-4 w-4 flex-shrink-0 text-gray-500" />
+                  <span className="truncate font-medium">{participant.location || 'Location not set'}</span>
                 </div>
+
+                {/* Quick Stats - Only show if they exist */}
+                <div className="flex items-center gap-3 text-xs text-gray-600">
+                  {participant.medications.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Pill className="h-3.5 w-3.5 text-blue-600" />
+                      <span className="font-medium">{participant.medications.length} medication{participant.medications.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                  {participant.behaviorPatterns.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Brain className="h-3.5 w-3.5 text-purple-600" />
+                      <span className="font-medium">{participant.behaviorPatterns.length} pattern{participant.behaviorPatterns.length !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                  {participant.supportPlan.strategies.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5 text-green-600" />
+                      <span className="font-medium">{participant.supportPlan.strategies.length} strateg{participant.supportPlan.strategies.length !== 1 ? 'ies' : 'y'}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Medication Preview */}
                 {participant.medications.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Pill className="h-4 w-4" />
-                    <span>{participant.medications.length} medications</span>
+                  <div className="bg-blue-50 border border-blue-200 px-3 py-2.5 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Next Medication</span>
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900 truncate">{participant.medications[0].name}</div>
+                    <div className="text-xs text-gray-600 mt-0.5">{participant.medications[0].dosage} at {participant.medications[0].time}</div>
                   </div>
                 )}
-                {participant.behaviorPatterns.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Brain className="h-4 w-4" />
-                    <span>{participant.behaviorPatterns.length} behavior patterns tracked</span>
+
+                {/* Behavior Alert */}
+                {participant.behaviorPatterns.length > 0 && participant.riskLevel !== 'low' && (
+                  <div className={`border px-3 py-2.5 rounded-lg ${
+                    participant.riskLevel === 'high' ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <AlertTriangle className={`h-4 w-4 ${
+                        participant.riskLevel === 'high' ? 'text-red-600' : 'text-yellow-600'
+                      }`} />
+                      <span className={`text-xs font-semibold uppercase tracking-wide ${
+                        participant.riskLevel === 'high' ? 'text-red-700' : 'text-yellow-700'
+                      }`}>Trigger Alert</span>
+                    </div>
+                    <div className="text-sm font-medium text-gray-900 line-clamp-1">{participant.behaviorPatterns[0].trigger}</div>
+                    {participant.behaviorPatterns[0].timeOfDay && (
+                      <div className="text-xs text-gray-600 mt-0.5">Common at: {participant.behaviorPatterns[0].timeOfDay}</div>
+                    )}
                   </div>
                 )}
+
+                {/* Emergency Contact */}
                 {participant.supportPlan.emergencyContacts.length > 0 && (
-                  <div className="pt-2 border-t">
-                    <div className="text-sm text-gray-500">Emergency Contact:</div>
-                    <div className="text-sm font-medium">
-                      {participant.supportPlan.emergencyContacts[0].name} ({participant.supportPlan.emergencyContacts[0].role})
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Emergency Contact</span>
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900 truncate">
+                      {participant.supportPlan.emergencyContacts[0].name}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-0.5">
+                      {participant.supportPlan.emergencyContacts[0].role} • {participant.supportPlan.emergencyContacts[0].phone}
+                    </div>
+                  </div>
+                )}
+
+                {/* Support Plan Preview */}
+                {participant.supportPlan.preferences.length > 0 && (
+                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 px-3 py-2.5 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Heart className="h-4 w-4 text-purple-600" />
+                      <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Key Preference</span>
+                    </div>
+                    <div className="text-sm text-gray-800 line-clamp-2 leading-relaxed">
+                      {participant.supportPlan.preferences[0]}
                     </div>
                   </div>
                 )}

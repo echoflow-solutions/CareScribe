@@ -329,7 +329,9 @@ export const participants: Participant[] = [
           phone: '0434 567 890'
         }
       ]
-    }
+    },
+    recentSuccess: 'Completed morning routine independently for 5 consecutive days',
+    communicationPreference: 'visual'
   },
   {
     id: '4',
@@ -387,7 +389,9 @@ export const participants: Participant[] = [
           phone: '0445 678 901'
         }
       ]
-    }
+    },
+    recentSuccess: 'Prepared a complete meal with minimal assistance',
+    communicationPreference: 'verbal'
   },
   {
     id: '5',
@@ -519,7 +523,9 @@ export const participants: Participant[] = [
           phone: '0467 890 123'
         }
       ]
-    }
+    },
+    recentSuccess: 'Led a group craft activity and helped two other participants',
+    communicationPreference: 'both'
   }
 ]
 

@@ -33,6 +33,11 @@ export interface Participant {
   id: string
   name: string
   facility: string
+  facilityId?: string // For database sync
+  dateOfBirth?: string
+  age?: number
+  ndisNumber?: string
+  profileImage?: string
   riskLevel: 'low' | 'medium' | 'high'
   currentStatus: 'calm' | 'anxious' | 'agitated' | 'happy' | 'resting'
   location: string
@@ -41,6 +46,19 @@ export interface Participant {
   behaviorPatterns: BehaviorPattern[]
   supportPlan: SupportPlan
   emergencyContact?: EmergencyContact
+  // New comprehensive fields
+  recentIncidents?: number // Count of incidents in last 7 days
+  lastIncidentDate?: string
+  onShift?: boolean // Is this participant assigned to current shift
+  mood?: 'positive' | 'neutral' | 'negative' // Overall mood trend
+  communicationPreference?: 'verbal' | 'visual' | 'both' | 'limited'
+  sensoryProfile?: {
+    lights?: 'bright' | 'dim' | 'no-preference'
+    sounds?: 'quiet' | 'moderate' | 'no-preference'
+    textures?: string[]
+  }
+  favoriteActivities?: string[]
+  recentSuccess?: string // Most recent positive achievement
 }
 
 export interface Medication {
@@ -49,6 +67,140 @@ export interface Medication {
   dosage: string
   time: string
   type: 'regular' | 'prn'
+  active?: boolean
+  websterPackEnabled?: boolean
+  pillDescription?: string
+  pillCountPerDose?: number
+  pharmacyId?: string
+  pharmacyMedicationId?: string
+  ndcCode?: string
+  fhirMedicationId?: string
+  lastPharmacySync?: string
+  prescriber?: string
+}
+
+export interface MedicationLog {
+  id: string
+  participantId: string
+  medicationId: string
+  administeredBy: string
+  administeredByName?: string
+  administeredAt: string
+  dosage: string
+  notes?: string
+}
+
+// Webster Pack & Medication Management Types
+export interface MedicationTimingSlot {
+  id: string
+  slotName: 'Morning' | 'Afternoon' | 'Evening' | 'Night'
+  defaultTime: string // '08:00', '12:00', '18:00', '22:00'
+  displayOrder: number
+  createdAt: string
+}
+
+export interface WebsterPack {
+  id: string
+  participantId: string
+  pharmacyId: string
+  packNumber: string
+  weekStarting: string // Date
+  weekEnding: string // Date
+  preparedDate: string // Date
+  expectedPillCount: number
+  actualPillCount?: number
+  status: 'pending' | 'received' | 'verified' | 'in_use' | 'depleted' | 'discarded'
+  receivedDate?: string
+  receivedBy?: string
+  verifiedDate?: string
+  verifiedBy?: string
+  verificationNotes?: string
+  discrepancyReported: boolean
+  fhirMedicationRequestId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WebsterPackSlot {
+  id: string
+  websterPackId: string
+  medicationId?: string
+  dayOfWeek: number // 0=Sunday, 6=Saturday
+  slotDate: string // Date
+  timingSlotId: string
+  timingSlotName: 'Morning' | 'Afternoon' | 'Evening' | 'Night'
+  expectedPillCount: number
+  actualPillCount?: number
+  medicationName: string
+  dosage: string
+  pillDescription?: string
+  administrationStatus: 'pending' | 'administered' | 'missed' | 'refused' | 'double_checked'
+  administeredAt?: string
+  administeredBy?: string
+  verificationRequired: boolean
+  verifiedBy?: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PharmacyIntegration {
+  id: string
+  facilityId: string
+  pharmacyName: string
+  pharmacyId: string
+  pharmacyAddress?: string
+  pharmacyPhone?: string
+  pharmacyEmail?: string
+  fhirEndpointUrl?: string
+  fhirApiKeyEncrypted?: string
+  integrationType: 'fhir' | 'erx' | 'custom_api' | 'manual'
+  syncEnabled: boolean
+  lastSyncAt?: string
+  lastSyncStatus?: 'success' | 'failed' | 'partial'
+  syncFrequencyHours: number
+  autoVerifyPacks: boolean
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PharmacySyncLog {
+  id: string
+  pharmacyIntegrationId: string
+  syncStartedAt: string
+  syncCompletedAt?: string
+  syncStatus: 'success' | 'failed' | 'partial'
+  medicationsSynced: number
+  websterPacksSynced: number
+  errorsEncountered: number
+  errorDetails?: Record<string, any>
+  syncDetails?: Record<string, any>
+  initiatedBy?: string
+  createdAt: string
+}
+
+export interface MedicationDiscrepancy {
+  id: string
+  websterPackId: string
+  websterPackSlotId?: string
+  discrepancyType: 'wrong_medication' | 'wrong_count' | 'missing_dose' | 'extra_dose' | 'damaged'
+  expectedMedication?: string
+  expectedCount?: number
+  actualMedication?: string
+  actualCount?: number
+  description: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  reportedBy?: string
+  reportedAt: string
+  pharmacyNotified: boolean
+  pharmacyNotifiedAt?: string
+  resolved: boolean
+  resolvedAt?: string
+  resolvedBy?: string
+  resolutionNotes?: string
+  pharmacyResponse?: string
+  createdAt: string
 }
 
 export interface BehaviorPattern {
@@ -86,6 +238,7 @@ export interface Incident {
   severity: 'low' | 'medium' | 'high'
   timestamp: string
   location: string
+  facilityId?: string // CRITICAL: Enables cross-user sync at facility level
   staffId: string
   staffName: string
   description: string
