@@ -13,7 +13,7 @@ import {
   Mic, Sparkles, Building, UserCheck, Bell,
   TrendingUp, Play,
   Radio, Newspaper, ListTodo, Zap, GraduationCap, Trophy, Heart, BookOpen,
-  DollarSign, GitBranch, FolderOpen, Activity, PieChart, Car, ShieldAlert, HelpCircle
+  DollarSign, GitBranch, FolderOpen, Activity, PieChart, Car, ShieldAlert, HelpCircle, Target, Calendar
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -149,6 +149,18 @@ function SidebarComponent({ isOpen, onToggle, isMobile = false }: SidebarProps) 
           badge: null,
         },
         {
+          title: 'Roster Management',
+          icon: Calendar,
+          href: '/roster',
+          badge: null,
+        },
+        {
+          title: 'Incident Management',
+          icon: ShieldAlert,
+          href: '/incidents',
+          badge: null,
+        },
+        {
           title: 'Team Performance',
           icon: TrendingUp,
           href: '/performance',
@@ -206,7 +218,7 @@ function SidebarComponent({ isOpen, onToggle, isMobile = false }: SidebarProps) 
           title: 'Restrictive Practices',
           icon: ShieldAlert,
           href: '/restrictive-practices',
-          badge: 'Compliance',
+          badge: null,
         },
       ]
     }
@@ -214,6 +226,36 @@ function SidebarComponent({ isOpen, onToggle, isMobile = false }: SidebarProps) 
     // Management roles (Clinical Manager, Area Manager, Executive)
     return [
       ...baseItems,
+      {
+        title: 'Budget & Finance',
+        icon: DollarSign,
+        href: '/budget',
+        badge: null,
+      },
+      {
+        title: 'Quality Improvement',
+        icon: Target,
+        href: '/quality-improvement',
+        badge: null,
+      },
+      {
+        title: 'Incident Management',
+        icon: ShieldAlert,
+        href: '/incidents',
+        badge: null,
+      },
+      {
+        title: 'Roster Management',
+        icon: Calendar,
+        href: '/roster',
+        badge: null,
+      },
+      {
+        title: 'Client Outcomes',
+        icon: TrendingUp,
+        href: '/outcomes',
+        badge: null,
+      },
       {
         title: 'Analytics',
         icon: BarChart3,
@@ -266,7 +308,7 @@ function SidebarComponent({ isOpen, onToggle, isMobile = false }: SidebarProps) 
         title: 'Restrictive Practices',
         icon: ShieldAlert,
         href: '/restrictive-practices',
-        badge: 'Compliance',
+        badge: null,
       },
     ]
   }
@@ -382,21 +424,21 @@ function SidebarComponent({ isOpen, onToggle, isMobile = false }: SidebarProps) 
                 variant={isActive ? "secondary" : "ghost"}
                 onClick={() => router.push(item.href)}
                 className={cn(
-                  "w-full relative overflow-hidden",
+                  "w-full relative",
                   isOpen || isMobile ? "justify-start" : "justify-center px-2",
                   isActive && "bg-primary/10 text-primary hover:bg-primary/20"
                 )}
               >
                 <Icon className={cn("h-4 w-4 shrink-0", (isOpen || isMobile) && "mr-3")} />
                 {(isOpen || isMobile) && (
-                  <span className="flex-1 text-left">
+                  <span className="flex-1 text-left truncate min-w-0">
                     {item.title}
                   </span>
                 )}
                 {item.badge && (isOpen || isMobile) && (
                   <Badge
                     variant={typeof item.badge === 'number' ? "destructive" : "secondary"}
-                    className="ml-auto shrink-0"
+                    className="ml-2 shrink-0 text-xs"
                   >
                     {item.badge}
                   </Badge>
