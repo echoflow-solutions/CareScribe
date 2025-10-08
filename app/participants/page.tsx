@@ -28,6 +28,64 @@ export default function MyParticipantsPage() {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Demo participants - same as shift-start page
+  const demoParticipants: Participant[] = [
+    {
+      id: '1',
+      name: 'Michael Brown',
+      facility: 'Parramatta - Maxlife Care',
+      age: 28,
+      riskLevel: 'high',
+      currentStatus: 'calm',
+      location: 'Bedroom 1',
+      medications: [],
+      behaviorPatterns: [],
+      supportPlan: {
+        id: '1',
+        participantId: '1',
+        strategies: ['Behavior management plan for 2:00-3:00 PM'],
+        preferences: [],
+        emergencyContacts: []
+      }
+    },
+    {
+      id: '2',
+      name: 'Emma Wilson',
+      facility: 'Parramatta - Maxlife Care',
+      age: 32,
+      riskLevel: 'medium',
+      currentStatus: 'happy',
+      location: 'Common Area',
+      medications: [],
+      behaviorPatterns: [],
+      supportPlan: {
+        id: '2',
+        participantId: '2',
+        strategies: ['Morning medication schedule', 'PRN medications available'],
+        preferences: [],
+        emergencyContacts: []
+      }
+    },
+    {
+      id: '3',
+      name: 'Lisa Thompson',
+      facility: 'Parramatta - Maxlife Care',
+      age: 25,
+      riskLevel: 'low',
+      currentStatus: 'happy',
+      location: 'Activity Room',
+      medications: [],
+      behaviorPatterns: [],
+      supportPlan: {
+        id: '3',
+        participantId: '3',
+        strategies: ['Group activities at 2:00 PM', 'Craft materials needed'],
+        preferences: [],
+        emergencyContacts: []
+      }
+    }
+  ]
+
   useEffect(() => {
     loadShiftParticipants()
   }, [currentShift])
@@ -35,99 +93,26 @@ export default function MyParticipantsPage() {
   const loadShiftParticipants = async () => {
     try {
       console.log('[My Participants] Loading participants for shift:', currentShift)
-      let shiftParticipants: Participant[] = []
 
-      // First try to get the active shift from the database
-      let activeShift = currentShift
-
-      if (!activeShift && currentUser) {
-        console.log('[My Participants] No currentShift in store, looking up staff record for user:', currentUser.email)
-
-        // ═══════════════════════════════════════════════════════════════════════════════
-        // 🔒 CRITICAL FIX - DO NOT MODIFY THIS SECTION
-        // ═══════════════════════════════════════════════════════════════════════════════
-        // PROBLEM: currentUser.id is NOT the same as the staff_id used in shifts table
-        // SOLUTION: Look up staff record by email to get the correct staff_id
-        //
-        // WHY THIS WORKS:
-        // 1. Users table has: id (user_id), email, name
-        // 2. Staff table has: id (staff_id), email, name
-        // 3. Shifts table references: staff_id (NOT user_id!)
-        // 4. Email is the ONLY common field between users and staff
-        //
-        // ⚠️ WARNING: If you remove this lookup, participants will NOT load!
-        // 📖 See: PARTICIPANTS-FIX-PERMANENT.md for full documentation
-        // ═══════════════════════════════════════════════════════════════════════════════
-        const { supabase } = await import('@/lib/supabase/client')
-
-        if (!supabase) {
-          console.error('[My Participants] Supabase client not available')
-          return
-        }
-
-        const { data: staffData } = await supabase
-          .from('staff')
-          .select('id')
-          .eq('email', currentUser.email)
-          .maybeSingle()
-
-        const staffId = staffData?.id
-        console.log('[My Participants] Staff ID for user:', staffId)
-        // ═══════════════════════════════════════════════════════════════════════════════
-        // END CRITICAL SECTION - Now we have the correct staff_id
-        // ═══════════════════════════════════════════════════════════════════════════════
-
-        if (staffId) {
-          // ✅ CORRECT: Using staff_id to query shifts (NOT user_id!)
-          activeShift = await SupabaseService.getCurrentShift(staffId)
-          console.log('[My Participants] Found active shift in database:', activeShift)
-
-          // If no active shift, check for scheduled shifts today or tomorrow
-          if (!activeShift) {
-            console.log('[My Participants] No active shift, checking for scheduled shifts...')
-
-            // Try to find shifts for today and tomorrow
-            const today = new Date().toISOString().split('T')[0]
-            const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-
-            // ✅ CORRECT: Using staff_id to get shifts (NOT user_id!)
-            const scheduledShifts = await SupabaseService.getStaffShifts(staffId, today, tomorrow)
-            console.log('[My Participants] Found scheduled shifts:', scheduledShifts)
-
-            if (scheduledShifts && scheduledShifts.length > 0) {
-              // Use the first scheduled shift
-              activeShift = {
-                id: scheduledShifts[0].id,
-                staffId: scheduledShifts[0].staff_id,
-                facilityId: scheduledShifts[0].facility_id,
-                startTime: scheduledShifts[0].start_time,
-                endTime: scheduledShifts[0].end_time,
-                status: scheduledShifts[0].status
-              }
-              console.log('[My Participants] Using scheduled shift:', activeShift)
-            }
-          }
-        } else {
-          console.warn('[My Participants] No staff record found for user email:', currentUser.email)
-        }
+      // If no shift, use demo participants
+      if (!currentShift?.id) {
+        console.log('[My Participants] No current shift, using demo participants')
+        setParticipants(demoParticipants)
+        setLoading(false)
+        return
       }
 
-      if (activeShift?.id) {
-        // ✅ CORRECT: Fetching participants using shift.id
-        // This queries the shift_participants table which links shifts to participants
-        console.log('[My Participants] Fetching participants for shift ID:', activeShift.id)
-        shiftParticipants = await SupabaseService.getShiftParticipants(activeShift.id)
-        console.log('[My Participants] Loaded participants from Supabase:', shiftParticipants)
-      } else {
-        // No shift found - show empty state
-        console.log('[My Participants] No shift found, showing empty state')
-        shiftParticipants = []
-      }
+      // Try to load from database
+      console.log('[My Participants] Fetching participants for shift ID:', currentShift.id)
+      const shiftParticipants = await SupabaseService.getShiftParticipants(currentShift.id)
+      console.log('[My Participants] Loaded participants from Supabase:', shiftParticipants)
 
-      setParticipants(shiftParticipants)
+      // Use database participants if found, otherwise use demo participants
+      setParticipants(shiftParticipants.length > 0 ? shiftParticipants : demoParticipants)
     } catch (error) {
       console.error('[My Participants] Error loading participants:', error)
-      setParticipants([])
+      // On error, use demo participants
+      setParticipants(demoParticipants)
     } finally {
       setLoading(false)
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { Sidebar } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Menu } from 'lucide-react'
@@ -12,33 +13,46 @@ interface AppLayoutProps {
   children: React.ReactNode
 }
 
+// Initialize sidebar state from localStorage synchronously
+const getInitialSidebarState = () => {
+  if (typeof window === 'undefined') return true
+  const savedState = localStorage.getItem('sidebarOpen')
+  return savedState !== null ? savedState === 'true' : true
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname()
   const { currentUser } = useStore()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(true) // Always start with true to match SSR
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   // Check if we should show the layout (not on auth pages)
   const showLayout = currentUser && !pathname.includes('/login') && pathname !== '/'
 
-  // Handle responsive behavior
+  // Single initialization effect - runs once on mount
   useEffect(() => {
-    const checkScreenSize = () => {
-      const mobile = window.innerWidth < 1024
-      setIsMobile(mobile)
-      
-      // Load saved state from localStorage
+    const initMobile = window.innerWidth < 1024
+
+    // Set all state in one batch
+    setMounted(true)
+    setIsMobile(initMobile)
+
+    // Set initial sidebar state based on screen size and localStorage ONCE
+    if (initMobile) {
+      setSidebarOpen(false)
+    } else {
       const savedState = localStorage.getItem('sidebarOpen')
-      if (savedState !== null) {
-        setSidebarOpen(mobile ? false : savedState === 'true')
-      } else {
-        setSidebarOpen(!mobile)
-      }
+      setSidebarOpen(savedState !== null ? savedState === 'true' : true)
     }
 
-    checkScreenSize()
-    window.addEventListener('resize', checkScreenSize)
-    return () => window.removeEventListener('resize', checkScreenSize)
+    // Handle window resize - only update isMobile, don't touch sidebarOpen
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   // Save sidebar state to localStorage
@@ -56,16 +70,17 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} isMobile={isMobile} />
+      {/* Sidebar - only render after mount to prevent hydration mismatch */}
+      {mounted && <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} isMobile={isMobile} />}
 
       {/* Main content */}
-      <div
-        className={cn(
-          "transition-all duration-300",
-          !isMobile && sidebarOpen && "lg:ml-[260px]",
-          !isMobile && !sidebarOpen && "lg:ml-[80px]"
-        )}
+      <motion.div
+        initial={false}
+        animate={{
+          marginLeft: isMobile ? 0 : (sidebarOpen ? 260 : 80)
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="min-h-screen"
       >
         {/* Mobile header */}
         {isMobile && (
@@ -86,7 +101,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <main className="min-h-screen">
           {children}
         </main>
-      </div>
+      </motion.div>
     </div>
   )
 }

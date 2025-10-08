@@ -137,8 +137,11 @@ export default function ShiftsPage() {
   }
 
   const startShift = async (shift: Shift) => {
+    if (!currentUser) return
+
     try {
-      await SupabaseService.clockIn(shift.id, currentUser?.id || '')
+      // Simple clock-in with just user ID
+      await SupabaseService.clockIn(currentUser.id)
 
       // Update local state
       const now = format(new Date(), 'HH:mm')
@@ -149,14 +152,14 @@ export default function ShiftsPage() {
       ))
 
       toast({
-        title: 'Shift Started',
-        description: `Your shift at ${shift.facilityName} has started`
+        title: 'Clocked In',
+        description: `Clocked in at ${now}`
       })
     } catch (error) {
-      console.error('Error starting shift:', error)
+      console.error('Error clocking in:', error)
       toast({
         title: 'Error',
-        description: 'Failed to clock in to shift',
+        description: 'Failed to clock in',
         variant: 'destructive'
       })
     }
@@ -171,15 +174,10 @@ export default function ShiftsPage() {
     if (!activeHandover) return
 
     try {
-      // Filter out empty critical info
-      const criticalInfo = handoverNotes.criticalInfo.filter(info => info.trim() !== '')
+      if (!currentUser) return
 
-      await SupabaseService.clockOut(
-        activeHandover.id,
-        currentUser?.id || '',
-        handoverNotes.generalNotes,
-        criticalInfo.length > 0 ? criticalInfo : undefined
-      )
+      // Simple clock-out
+      await SupabaseService.clockOut(currentUser.id)
 
       // Update local state
       const now = format(new Date(), 'HH:mm')
@@ -195,8 +193,8 @@ export default function ShiftsPage() {
       ))
 
       toast({
-        title: 'Shift Completed',
-        description: 'Handover notes have been saved'
+        title: 'Clocked Out',
+        description: `Clocked out at ${now}`
       })
 
       setShowHandoverDialog(false)

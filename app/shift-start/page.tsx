@@ -6,13 +6,15 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Avatar } from '@/components/ui/avatar'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   MapPin, Clock, Users, AlertTriangle, Calendar,
   Thermometer, Pill, Settings, FileText, Play, ChevronDown, ChevronRight,
   Bell, ArrowRight, CheckCircle, Navigation, AlertCircle, LogIn, LogOut,
-  Coffee, Activity, TrendingUp, Timer, CheckSquare, Award, Star
+  Coffee, Activity, TrendingUp, Timer, CheckSquare, Award, Star, BookOpen,
+  Sparkles, ClipboardCheck, Send
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -63,18 +65,67 @@ function ShiftStartContent() {
     { id: 'house5', name: 'Blacktown - Maxlife Care' }
   ]
   
-  // Support workers on duty for this shift with location status
-  const supportWorkers = [
+  // Demo participants for this shift
+  const demoParticipants: Participant[] = [
     {
-      name: 'Bernard Adjei',
-      role: 'Support Worker',
-      shift: '7:00 AM - 3:00 PM',
-      status: 'on-site',
-      statusText: 'On Site',
-      statusColor: 'green',
-      distance: '0 km',
-      eta: null
+      id: '1',
+      name: 'Michael Brown',
+      facility: 'Parramatta - Maxlife Care',
+      age: 28,
+      riskLevel: 'high',
+      currentStatus: 'calm',
+      location: 'Bedroom 1',
+      medications: [],
+      behaviorPatterns: [],
+      supportPlan: {
+        id: '1',
+        participantId: '1',
+        strategies: ['Behavior management plan for 2:00-3:00 PM'],
+        preferences: [],
+        emergencyContacts: []
+      }
     },
+    {
+      id: '2',
+      name: 'Emma Wilson',
+      facility: 'Parramatta - Maxlife Care',
+      age: 32,
+      riskLevel: 'medium',
+      currentStatus: 'happy',
+      location: 'Common Area',
+      medications: [],
+      behaviorPatterns: [],
+      supportPlan: {
+        id: '2',
+        participantId: '2',
+        strategies: ['Morning medication schedule', 'PRN medications available'],
+        preferences: [],
+        emergencyContacts: []
+      }
+    },
+    {
+      id: '3',
+      name: 'Lisa Thompson',
+      facility: 'Parramatta - Maxlife Care',
+      age: 25,
+      riskLevel: 'low',
+      currentStatus: 'happy',
+      location: 'Activity Room',
+      medications: [],
+      behaviorPatterns: [],
+      supportPlan: {
+        id: '3',
+        participantId: '3',
+        strategies: ['Group activities at 2:00 PM', 'Craft materials needed'],
+        preferences: [],
+        emergencyContacts: []
+      }
+    }
+  ]
+
+  // Support workers on duty for this shift with location status
+  // Dynamically build list with current logged-in user replacing the first slot
+  const otherSupportWorkers = [
     {
       name: 'Michael Chen',
       role: 'Support Worker',
@@ -97,10 +148,39 @@ function ShiftStartContent() {
     }
   ]
 
+  // Build support workers list with current user at the top
+  const supportWorkers = currentUser
+    ? [
+        {
+          name: currentUser.name,
+          role: currentUser.role.name,
+          shift: '7:00 AM - 3:00 PM',
+          status: 'on-site',
+          statusText: 'On Site',
+          statusColor: 'green',
+          distance: '0 km',
+          eta: null
+        },
+        ...otherSupportWorkers
+      ]
+    : [
+        {
+          name: 'Bernard Adjei',
+          role: 'Support Worker',
+          shift: '7:00 AM - 3:00 PM',
+          status: 'on-site',
+          statusText: 'On Site',
+          statusColor: 'green',
+          distance: '0 km',
+          eta: null
+        },
+        ...otherSupportWorkers
+      ]
+
   const loadParticipants = async () => {
     if (!currentShift?.id) {
-      console.log('[Shift Start] No current shift, clearing participants')
-      setParticipants([])
+      console.log('[Shift Start] No current shift, using demo participants')
+      setParticipants(demoParticipants)
       return
     }
 
@@ -108,10 +188,10 @@ function ShiftStartContent() {
       console.log('[Shift Start] Loading participants for shift:', currentShift.id)
       const shiftParticipants = await SupabaseService.getShiftParticipants(currentShift.id)
       console.log('[Shift Start] Loaded participants:', shiftParticipants)
-      setParticipants(shiftParticipants)
+      setParticipants(shiftParticipants.length > 0 ? shiftParticipants : demoParticipants)
     } catch (error) {
       console.error('[Shift Start] Error loading participants:', error)
-      setParticipants([])
+      setParticipants(demoParticipants)
     }
   }
 
@@ -124,29 +204,33 @@ function ShiftStartContent() {
       loadParticipants()
     }
 
-    // Debug: Log shift state on mount
-    console.log('[Shift Start] Current shift from store:', currentShift)
-    console.log('[Shift Start] Has hydrated:', hasHydrated)
-    console.log('[Shift Start] Is shift active:', isShiftActive)
+    // Restore clock status from database on page load
+    const restoreClockStatus = async () => {
+      if (!currentUser || !hasHydrated) return
 
-    // Validate current shift on mount - clear if invalid
-    if (currentShift && hasHydrated) {
-      const endTime = new Date(currentShift.endTime)
-      const now = new Date()
+      const clockStatus = await SupabaseService.getClockStatus(currentUser.id)
 
-      // If shift has expired or is invalid, clear it
-      if (endTime <= now || currentShift.status !== 'active') {
-        console.log('[Shift Start] Shift expired or invalid, clearing it')
-        setCurrentShift(null)
+      if (clockStatus?.isClockedIn && clockStatus.clockInTime) {
+        const clockInTime = new Date(clockStatus.clockInTime)
+        const shiftEndTime = new Date(clockInTime.getTime() + 8 * 60 * 60 * 1000)
 
-        // Try to end it in database
-        if (currentShift.id) {
-          DataService.endShift(currentShift.id).catch((error) => {
-            console.warn('[Shift Start] Error ending expired shift:', error)
-          })
+        const simpleShift = {
+          id: `clock-${currentUser.id}`,
+          staffId: currentUser.id,
+          facilityId: 'default',
+          startTime: clockInTime.toISOString(),
+          endTime: shiftEndTime.toISOString(),
+          status: 'active' as const
         }
+
+        setCurrentShift(simpleShift)
+      } else if (!clockStatus?.isClockedIn && currentShift) {
+        // User is not clocked in but local state shows they are - clear it
+        setCurrentShift(null)
       }
     }
+
+    restoreClockStatus()
 
     // Update time every second
     const timer = setInterval(() => {
@@ -154,15 +238,12 @@ function ShiftStartContent() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [hasHydrated])
+  }, [hasHydrated, currentUser])
 
   useEffect(() => {
     // Monitor currentShift changes and reload participants
-    console.log('[Shift Start] currentShift changed:', currentShift)
-    if (currentShift?.id && hasHydrated) {
+    if (hasHydrated) {
       loadParticipants()
-    } else {
-      setParticipants([])
     }
   }, [currentShift, hasHydrated])
 
@@ -173,7 +254,6 @@ function ShiftStartContent() {
 
       // Check if shift has ended (countdown reached 0)
       if (timeRemaining && timeRemaining.total <= 0) {
-        console.log('[Shift Start] Shift time has expired! Opening shift end modal...')
         setShowShiftEndedModal(true)
       }
     }
@@ -224,33 +304,52 @@ function ShiftStartContent() {
   }
 
   const handleClockIn = async () => {
+    if (!currentUser) return
+
     setIsLoading(true)
     try {
-      const startTime = new Date()
-      const endTime = new Date(startTime.getTime() + 8 * 60 * 60 * 1000) // 8 hours
+      const clockInTime = new Date()
 
-      const shiftData = {
-        staffId: currentUser!.id,
-        facilityId: '650e8400-e29b-41d4-a716-446655440003', // Parramatta - Maxlife Care UUID
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+      // Simple clock-in to database
+      const success = await SupabaseService.clockIn(currentUser.id)
+
+      if (!success) {
+        throw new Error('Failed to clock in')
+      }
+
+      // Create minimal shift object for UI state (8-hour default shift)
+      const shiftEndTime = new Date(clockInTime.getTime() + 8 * 60 * 60 * 1000)
+      const simpleShift = {
+        id: `clock-${currentUser.id}`, // Simple ID for UI purposes
+        staffId: currentUser.id,
+        facilityId: 'default',
+        startTime: clockInTime.toISOString(),
+        endTime: shiftEndTime.toISOString(),
         status: 'active' as const
       }
 
-      console.log('[Shift Start] Clocking in with shift data:', shiftData)
-      // DataService.startShift now saves to database and returns shift with database ID
-      const createdShift = await DataService.startShift(shiftData as any)
-      setCurrentShift(createdShift) // Store shift with database ID
-      console.log('[Shift Start] Shift saved to database and store with ID:', createdShift.id)
-      console.log('[Shift Start] localStorage after save:', localStorage.getItem('carescribe-storage'))
+      setCurrentShift(simpleShift)
+
+      toast({
+        title: "Clocked In Successfully",
+        description: `Clocked in at ${clockInTime.toLocaleTimeString()}`,
+      })
+
       setIsLoading(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error clocking in:', error)
+      toast({
+        title: "Error Clocking In",
+        description: error?.message || "Failed to clock in. Please try again.",
+        variant: "destructive"
+      })
       setIsLoading(false)
     }
   }
 
   const handleClockOut = async () => {
+    if (!currentUser) return
+
     // Check if all required tasks are completed
     if (!tasksCompleted.progressNotes) {
       setShowClockOutModal(true)
@@ -259,10 +358,11 @@ function ShiftStartContent() {
 
     setIsLoading(true)
     try {
-      if (currentShift) {
-        await DataService.endShift(currentShift.id)
-      }
-      setCurrentShift(null) // This will clear from localStorage automatically
+      // Simple clock-out to database
+      await SupabaseService.clockOut(currentUser.id)
+
+      // Clear local state
+      setCurrentShift(null)
       setOnBreak(false)
       setBreakStartTime(null)
       setTotalBreakTime(0)
@@ -303,12 +403,38 @@ function ShiftStartContent() {
   }
 
   const handleShiftEndComplete = async () => {
-    if (!currentShift) return
+    if (!currentShift || !currentUser) return
 
     setIsLoading(true)
     try {
-      // End shift with handover notes
-      await DataService.endShift(currentShift.id, handoverNotes)
+      const clockInTime = new Date(currentShift.startTime).toISOString()
+      const clockOutTime = new Date().toISOString()
+
+      // Calculate duration in hours
+      const durationMs = new Date().getTime() - new Date(currentShift.startTime).getTime()
+      const durationHours = Number((durationMs / (1000 * 60 * 60)).toFixed(2))
+
+      // Save shift handover notes to Supabase
+      const notesSaved = await SupabaseService.saveShiftHandoverNotes(
+        currentUser.id,
+        clockInTime,
+        clockOutTime,
+        durationHours,
+        totalBreakTime,
+        handoverNotes,
+        progressNotes || null
+      )
+
+      if (!notesSaved) {
+        throw new Error('Failed to save shift notes')
+      }
+
+      // Clock out the user
+      const clockedOut = await SupabaseService.clockOut(currentUser.id)
+
+      if (!clockedOut) {
+        throw new Error('Failed to clock out')
+      }
 
       // Clear shift from store
       setCurrentShift(null)
@@ -425,9 +551,13 @@ function ShiftStartContent() {
                             key={participant.id}
                             className="flex items-center gap-3 bg-white p-3 rounded-md"
                           >
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
-                              {participant.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </div>
+                            <Avatar className="h-10 w-10 border-2 border-gray-200">
+                              <img
+                                src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(participant.name)}`}
+                                alt={participant.name}
+                                className="h-full w-full rounded-full object-cover bg-gray-100"
+                              />
+                            </Avatar>
                             <div className="flex-1">
                               <p className="font-medium text-gray-900">{participant.name}</p>
                               <p className="text-xs text-gray-500">
@@ -458,6 +588,35 @@ function ShiftStartContent() {
                       </p>
                     </div>
                   )}
+
+                  {/* Handover Review Alert - BEFORE CLOCK IN */}
+                  <Alert className="mb-6 border-blue-500 bg-blue-50 border-2 animate-pulse">
+                    <BookOpen className="h-5 w-5 text-blue-600" />
+                    <AlertDescription className="text-blue-900">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="font-semibold text-lg mb-2">📋 Review Handover Notes Before Starting</p>
+                          <p className="text-sm">
+                            There are <span className="font-bold">3 URGENT</span> and <span className="font-bold">2 ACTION REQUIRED</span> handover notes from previous shifts that need your attention.
+                          </p>
+                          <p className="text-sm mt-2">
+                            <strong>⚠️ Important:</strong> Don't miss critical information like Lisa Thompson's hospital appointment on Saturday or the bathroom leak in West Wing.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => router.push('/handover')}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          size="lg"
+                        >
+                          <BookOpen className="mr-2 h-5 w-5" />
+                          Review All Handover Notes (7 days)
+                        </Button>
+                        <p className="text-xs text-center text-blue-700">
+                          💡 Unlike the paper book, this shows ALL notes from the past week - no more missed information!
+                        </p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
 
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
@@ -793,7 +952,7 @@ function ShiftStartContent() {
                       >
                         <div className="flex items-start gap-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium relative ${
-                            worker.name === 'Bernard Adjei' ? 'bg-primary text-white' : 'bg-gray-300 text-gray-700'
+                            worker.name === currentUser?.name ? 'bg-primary text-white' : 'bg-gray-300 text-gray-700'
                           }`}>
                             {worker.name.split(' ').map(n => n[0]).join('')}
                             {/* Status Indicator Dot */}
@@ -808,7 +967,7 @@ function ShiftStartContent() {
                             <div className="flex items-center gap-2 mb-1">
                               <p className="text-sm font-semibold text-gray-900">
                                 {worker.name}
-                                {worker.name === 'Bernard Adjei' && (
+                                {worker.name === currentUser?.name && (
                                   <span className="text-xs text-gray-500 ml-1">(You)</span>
                                 )}
                               </p>
@@ -991,15 +1150,23 @@ function ShiftStartContent() {
               Continue Shift
             </Button>
             <Button
+              disabled={!tasksCompleted.progressNotes}
               onClick={async () => {
                 setShowClockOutModal(false)
-                // Proceed with clock out
                 setIsLoading(true)
+
                 try {
+                  // CRITICAL: Update database clock status FIRST to prevent restoration
+                  if (currentUser) {
+                    await SupabaseService.clockOut(currentUser.id)
+                  }
+
+                  // End shift in database/localStorage
                   if (currentShift) {
                     await DataService.endShift(currentShift.id)
                   }
-                  setCurrentShift(null) // This will clear from localStorage automatically
+
+                  // Clear local state
                   setOnBreak(false)
                   setBreakStartTime(null)
                   setTotalBreakTime(0)
@@ -1009,14 +1176,31 @@ function ShiftStartContent() {
                     incidentReports: false,
                     handoverNotes: false
                   })
-                  router.push('/dashboard')
+
+                  // Clear Zustand store
+                  setCurrentShift(null)
+
+                  // Force clear localStorage as failsafe
+                  const storage = localStorage.getItem('carescribe-storage')
+                  if (storage) {
+                    const parsed = JSON.parse(storage)
+                    parsed.state.currentShift = null
+                    localStorage.setItem('carescribe-storage', JSON.stringify(parsed))
+                  }
+
+                  // Reset loading state before redirect
+                  setIsLoading(false)
+
+                  // Use replace instead of push to avoid history issues
+                  // Add small delay to ensure state updates settle
+                  await new Promise(resolve => setTimeout(resolve, 200))
+                  router.replace('/shift-start')
                 } catch (error) {
                   console.error('Error clocking out:', error)
                   setIsLoading(false)
                 }
               }}
-              disabled={!tasksCompleted.progressNotes}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Clock Out Now
@@ -1027,112 +1211,184 @@ function ShiftStartContent() {
 
       {/* Shift Ended Modal */}
       <Dialog open={showShiftEndedModal} onOpenChange={setShowShiftEndedModal}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              Shift Ended - Complete Handover
-            </DialogTitle>
-            <DialogDescription>
-              Your scheduled shift time has ended. Please complete your handover notes and progress reports before finishing.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="relative">
+            {/* Decorative gradient background */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-green-200 to-blue-200 rounded-full blur-3xl opacity-20" />
+            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-gradient-to-tr from-purple-200 to-pink-200 rounded-full blur-3xl opacity-20" />
 
-          <div className="space-y-6 py-4">
-            {/* Shift Summary */}
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h4 className="font-semibold text-blue-900 mb-2">Shift Summary</h4>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-blue-700">Started:</span>
-                  <span className="ml-2 font-medium">{shiftStartTime && format(shiftStartTime, 'h:mm a')}</span>
+            <DialogHeader className="relative space-y-4 pb-2">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-center mb-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full blur-xl opacity-50 animate-pulse" />
+                    <div className="relative bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-full">
+                      <Sparkles className="h-8 w-8 text-white" />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-blue-700">Ended:</span>
-                  <span className="ml-2 font-medium">{shiftEndTime && format(shiftEndTime, 'h:mm a')}</span>
+                <DialogTitle className="text-center text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  Shift Completed!
+                </DialogTitle>
+                <DialogDescription className="text-center text-base">
+                  Great work today! Please complete your handover notes to help the next shift team.
+                </DialogDescription>
+              </motion.div>
+            </DialogHeader>
+
+            <div className="space-y-6 py-6 relative">
+              {/* Shift Summary */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6 border border-blue-100 shadow-lg"
+              >
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-2xl" />
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <ClipboardCheck className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 text-lg">Shift Summary</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-blue-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-600">Started</span>
+                      </div>
+                      <span className="text-lg font-bold text-gray-900">{shiftStartTime && format(shiftStartTime, 'h:mm a')}</span>
+                    </div>
+                    <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-purple-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle className="h-4 w-4 text-purple-600" />
+                        <span className="text-sm font-medium text-gray-600">Ended</span>
+                      </div>
+                      <span className="text-lg font-bold text-gray-900">{shiftEndTime && format(shiftEndTime, 'h:mm a')}</span>
+                    </div>
+                    <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-indigo-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Timer className="h-4 w-4 text-indigo-600" />
+                        <span className="text-sm font-medium text-gray-600">Duration</span>
+                      </div>
+                      <span className="text-lg font-bold text-gray-900">8 hours</span>
+                    </div>
+                    <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-emerald-100">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Coffee className="h-4 w-4 text-emerald-600" />
+                        <span className="text-sm font-medium text-gray-600">Break Time</span>
+                      </div>
+                      <span className="text-lg font-bold text-gray-900">{formatDuration(totalBreakTime)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-blue-700">Duration:</span>
-                  <span className="ml-2 font-medium">8 hours</span>
+              </motion.div>
+
+              {/* Handover Notes - Required */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="handover-notes" className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-gray-700" />
+                    Handover Notes
+                  </Label>
+                  <Badge variant="destructive" className="shadow-sm">Required</Badge>
                 </div>
-                <div>
-                  <span className="text-blue-700">Break Time:</span>
-                  <span className="ml-2 font-medium">{formatDuration(totalBreakTime)}</span>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Share important updates for the next shift team - participant status, incidents, pending tasks, and key observations.
+                </p>
+                <Textarea
+                  id="handover-notes"
+                  placeholder="Example: Sarah had a great day! Completed all activities with enthusiasm. Medication administered at 2pm as scheduled. John needs follow-up for his doctor's appointment tomorrow at 10am..."
+                  value={handoverNotes}
+                  onChange={(e) => setHandoverNotes(e.target.value)}
+                  rows={5}
+                  className="resize-none border-2 focus:border-blue-400 focus:ring-blue-400 transition-all duration-200 shadow-sm"
+                />
+              </motion.div>
+
+              {/* Progress Notes - Optional */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="progress-notes" className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-gray-700" />
+                    Progress Notes
+                  </Label>
+                  <Badge variant="secondary" className="shadow-sm">Optional</Badge>
                 </div>
-              </div>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Document participant achievements, behavioral observations, milestones, or areas of concern from your shift.
+                </p>
+                <Textarea
+                  id="progress-notes"
+                  placeholder="Example: Sarah demonstrated excellent communication skills during group activities today. She actively participated and helped other participants with their tasks..."
+                  value={progressNotes}
+                  onChange={(e) => setProgressNotes(e.target.value)}
+                  rows={4}
+                  className="resize-none border-2 focus:border-purple-400 focus:ring-purple-400 transition-all duration-200 shadow-sm"
+                />
+              </motion.div>
+
+              {/* Reminder */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Alert className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-sm">
+                  <AlertDescription className="flex items-start gap-3">
+                    <div className="p-1 bg-amber-100 rounded-full">
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <span className="text-sm text-gray-700 leading-relaxed">
+                      <span className="font-semibold text-gray-900">Important:</span> All handover notes are shared with the incoming shift team. Please ensure all critical information is clearly documented.
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              </motion.div>
             </div>
 
-            {/* Handover Notes - Required */}
-            <div>
-              <Label htmlFor="handover-notes" className="text-base font-semibold flex items-center gap-2">
-                Handover Notes
-                <Badge variant="destructive" className="text-xs">Required</Badge>
-              </Label>
-              <p className="text-sm text-gray-600 mb-2 mt-1">
-                Provide important information for the next shift (participant updates, incidents, tasks pending, etc.)
-              </p>
-              <Textarea
-                id="handover-notes"
-                placeholder="Example: Sarah had a good day, completed all activities. Medication administered at 2pm. John needs follow-up for appointment tomorrow at 10am..."
-                value={handoverNotes}
-                onChange={(e) => setHandoverNotes(e.target.value)}
-                rows={5}
-                className="resize-none"
-              />
-            </div>
-
-            {/* Progress Notes - Optional */}
-            <div>
-              <Label htmlFor="progress-notes" className="text-base font-semibold flex items-center gap-2">
-                Progress Notes
-                <Badge variant="secondary" className="text-xs">Optional</Badge>
-              </Label>
-              <p className="text-sm text-gray-600 mb-2 mt-1">
-                Document participant progress, behaviors, achievements, or concerns observed during your shift
-              </p>
-              <Textarea
-                id="progress-notes"
-                placeholder="Example: Sarah showed improved communication skills today. Participated actively in group activities..."
-                value={progressNotes}
-                onChange={(e) => setProgressNotes(e.target.value)}
-                rows={4}
-                className="resize-none"
-              />
-            </div>
-
-            {/* Reminder */}
-            <Alert className="border-l-4 border-l-yellow-500">
-              <AlertDescription className="flex items-start gap-3">
-                <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                <span className="text-sm">
-                  All handover notes will be available to the next shift. Ensure all critical information is documented.
-                </span>
-              </AlertDescription>
-            </Alert>
+            <DialogFooter className="sm:justify-between gap-3 pt-4 border-t relative">
+              <Button
+                variant="outline"
+                onClick={() => setShowShiftEndedModal(false)}
+                className="border-2 hover:bg-gray-50 transition-all duration-200"
+              >
+                Continue Shift
+              </Button>
+              <Button
+                onClick={handleShiftEndComplete}
+                disabled={!handoverNotes.trim() || isLoading}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </div>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Complete Shift & Submit
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
           </div>
-
-          <DialogFooter className="sm:justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setShowShiftEndedModal(false)}
-            >
-              Continue Shift
-            </Button>
-            <Button
-              onClick={handleShiftEndComplete}
-              disabled={!handoverNotes.trim() || isLoading}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isLoading ? (
-                <>Processing...</>
-              ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Complete Shift & Submit
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

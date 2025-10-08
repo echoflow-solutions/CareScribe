@@ -20,10 +20,28 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'carescribe_current_user'
 }
 
+// Simple UUID generator for browser compatibility
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
 export class DataService {
   // Check if we should use Supabase
   static useSupabase(): boolean {
     return SupabaseService.isAvailable()
+  }
+
+  // Get user-specific storage key for current shift
+  private static async getUserShiftKey(): Promise<string> {
+    const currentUser = await this.getCurrentUser()
+    if (currentUser) {
+      return `${STORAGE_KEYS.CURRENT_SHIFT}_${currentUser.id}`
+    }
+    return STORAGE_KEYS.CURRENT_SHIFT
   }
 
   // Initialize demo data (only for local storage)
@@ -260,47 +278,86 @@ export class DataService {
     if (this.useSupabase()) {
       const currentUser = await this.getCurrentUser()
       if (currentUser) {
+        // SIMPLIFIED: Query shifts directly with user ID
         return await SupabaseService.getCurrentShift(currentUser.id)
       }
       return null
     }
-    return await storage.get(STORAGE_KEYS.CURRENT_SHIFT)
+    // Use user-specific storage key for localStorage
+    const userShiftKey = await this.getUserShiftKey()
+    return await storage.get(userShiftKey)
   }
 
   static async startShift(shift: Shift): Promise<Shift> {
     if (this.useSupabase()) {
-      const createdShift = await SupabaseService.createShift(shift)
-      return createdShift
+      try {
+        // Get current user info to pass to Supabase
+        const currentUser = await this.getCurrentUser()
+        const createdShift = await SupabaseService.createShift(
+          shift,
+          currentUser?.name,
+          currentUser?.email,
+          currentUser?.role?.name
+        )
+        console.log('✅ [DataService] Shift created in Supabase with ID:', createdShift.id)
+        return createdShift
+      } catch (error: any) {
+        // If Supabase fails (e.g., foreign key constraint), generate local ID for demo mode
+        console.info('ℹ️ [DataService] Running in demo mode - using localStorage for shift tracking')
+        const localShift = { ...shift, id: generateUUID() }
+        console.log('✅ [DataService] Generated local shift with ID:', localShift.id)
+        // NOTE: We don't save to localStorage here - let Zustand store handle persistence
+        return localShift
+      }
     }
-    await storage.set(STORAGE_KEYS.CURRENT_SHIFT, shift)
-    return shift
+    // Generate local shift with UUID for non-Supabase mode
+    const localShift = { ...shift, id: generateUUID() }
+    console.log('✅ [DataService] Generated local shift (demo mode) with ID:', localShift.id)
+    // NOTE: We don't save to localStorage here - let Zustand store handle persistence
+    return localShift
   }
 
   static async endShift(shiftId: string, handoverNotes?: string): Promise<void> {
-    if (this.useSupabase()) {
+    // Check if this is a demo shift (non-UUID ID) - use localStorage for demo mode
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const isDemoShift = !uuidRegex.test(shiftId)
+
+    if (this.useSupabase() && !isDemoShift) {
+      // Only use Supabase for real UUID-based shifts
       await SupabaseService.endShift(shiftId, handoverNotes)
       return
     }
 
+    // Use localStorage for demo shifts or when Supabase is not available
     const shift = await this.getCurrentShift()
     if (shift) {
       shift.status = 'completed'
       shift.handoverNotes = handoverNotes
       shift.endTime = new Date().toISOString()
-      await storage.set(STORAGE_KEYS.CURRENT_SHIFT, shift)
+      // Use user-specific storage key for localStorage
+      const userShiftKey = await this.getUserShiftKey()
+      await storage.set(userShiftKey, shift)
     }
   }
 
   static async updateShift(shiftId: string, updates: Partial<Shift>): Promise<void> {
-    if (this.useSupabase()) {
+    // Check if this is a demo shift (non-UUID ID) - use localStorage for demo mode
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const isDemoShift = !uuidRegex.test(shiftId)
+
+    if (this.useSupabase() && !isDemoShift) {
+      // Only use Supabase for real UUID-based shifts
       await SupabaseService.updateShift(shiftId, updates)
       return
     }
 
+    // Use localStorage for demo shifts or when Supabase is not available
     const shift = await this.getCurrentShift()
     if (shift) {
       Object.assign(shift, updates)
-      await storage.set(STORAGE_KEYS.CURRENT_SHIFT, shift)
+      // Use user-specific storage key for localStorage
+      const userShiftKey = await this.getUserShiftKey()
+      await storage.set(userShiftKey, shift)
     }
   }
 

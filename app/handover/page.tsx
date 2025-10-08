@@ -2,107 +2,316 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, Moon, Users, Clock, AlertTriangle, FileText,
-  Activity, Pill, CheckCircle, Info, TrendingUp, Shield,
-  Calendar, Thermometer, Home, Phone, MessageSquare, Settings
+import {
+  ArrowLeft, BookOpen, AlertTriangle, CheckCircle, Clock, Calendar,
+  Filter, Eye, EyeOff, MessageSquare, User, Users, Home, Bell,
+  AlertCircle, Info, TrendingUp, FileText, Settings, Pill, Wrench,
+  ClipboardCheck, Target, Archive, RefreshCw, Search, X, Check
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow, isToday, isYesterday, differenceInDays } from 'date-fns'
+import { useStore } from '@/lib/store'
+
+// Priority badge colors and icons
+const getPriorityBadge = (priority: string) => {
+  switch (priority) {
+    case 'urgent':
+      return {
+        color: 'bg-red-100 text-red-800 border-red-300',
+        icon: AlertTriangle,
+        label: '🚨 URGENT'
+      }
+    case 'action-required':
+      return {
+        color: 'bg-amber-100 text-amber-800 border-amber-300',
+        icon: ClipboardCheck,
+        label: '⚡ ACTION REQUIRED'
+      }
+    case 'info':
+      return {
+        color: 'bg-blue-100 text-blue-800 border-blue-300',
+        icon: Info,
+        label: 'ℹ️ INFO'
+      }
+    default:
+      return {
+        color: 'bg-gray-100 text-gray-800 border-gray-300',
+        icon: MessageSquare,
+        label: 'FYI'
+      }
+  }
+}
+
+// Category icons
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'participant': return Users
+    case 'medication': return Pill
+    case 'maintenance': return Wrench
+    case 'incident': return AlertCircle
+    case 'follow-up': return Target
+    default: return MessageSquare
+  }
+}
 
 export default function HandoverPage() {
   const router = useRouter()
-  const [selectedTab, setSelectedTab] = useState('overview')
-  
-  // Night shift data
-  const nightShift = {
-    date: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
-    startTime: '11:00 PM',
-    endTime: '7:00 AM',
-    location: 'Parramatta - Maxlife Care',
-    shiftLead: 'Emma Williams',
-    totalIncidents: 2,
-    medicationsGiven: 12,
-    participantsSupported: 6
+  const { currentUser } = useStore()
+  const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedNote, setSelectedNote] = useState<string | null>(null)
+
+  // Sample handover notes - demonstrating the problem: notes from different days
+  // In real implementation, this would come from Supabase
+  const handoverNotes = [
+    {
+      id: '1',
+      title: '⚠️ URGENT: Lisa Thompson - Medical Appointment Saturday',
+      content: `Lisa Thompson has a specialist appointment on Saturday morning at 9:00 AM at Westmead Hospital.
+
+ACTION REQUIRED:
+- Transport MUST be booked by Friday
+- Bring her medication list and NDIS plan
+- She needs to fast from midnight (no breakfast)
+- Allow 45 minutes travel time
+
+Contact Dr. Sarah Chen's office if any questions: 02 9845 1234
+
+⚠️ This appointment was rescheduled from 3 months ago - DO NOT MISS IT!`,
+      category: 'participant',
+      priority: 'urgent',
+      createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 6 * 60 * 60 * 1000), // Tuesday afternoon
+      createdBy: 'Emma Williams',
+      actionRequired: true,
+      actionDeadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Saturday
+      targetShift: 'morning',
+      isRead: false,
+      participantNames: ['Lisa Thompson']
+    },
+    {
+      id: '2',
+      title: '🔧 ACTION REQUIRED: Bathroom Leak in West Wing',
+      content: `Bathroom in west wing (near Michael's room) has a slow leak under the sink.
+
+Plumber is scheduled for Friday afternoon but may come earlier if available.
+
+ACTION NEEDED:
+- Place towels under sink daily
+- Check for water damage each shift
+- Call Max (plumber) if leak gets worse: 0412 345 678
+
+Maintenance ticket #MT-2547`,
+      category: 'maintenance',
+      priority: 'action-required',
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000), // Wednesday morning
+      createdBy: 'James Martinez',
+      actionRequired: true,
+      targetShift: 'all',
+      isRead: false,
+      participantNames: []
+    },
+    {
+      id: '3',
+      title: '💊 Michael Brown - New Medication Started',
+      content: `Dr. Wilson has prescribed new anxiety medication for Michael Brown starting Thursday.
+
+Medication: Sertraline 50mg
+Timing: Morning with breakfast
+Side effects to watch: Nausea, drowsiness, dry mouth
+
+Please monitor and document:
+- Any side effects in first week
+- Mood changes
+- Sleep patterns
+
+This is in addition to his regular meds. Webster pack has been updated.`,
+      category: 'medication',
+      priority: 'action-required',
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000), // Wednesday night
+      createdBy: 'Sarah Johnson',
+      actionRequired: true,
+      targetShift: 'morning',
+      isRead: true,
+      participantNames: ['Michael Brown']
+    },
+    {
+      id: '4',
+      title: 'ℹ️ Emma Wilson - Early Morning Routine Working Well',
+      content: `Update on Emma: The new early morning routine is showing great results!
+
+She's been waking naturally around 5:30 AM and really enjoying the quiet time before breakfast.
+
+Continue:
+- Light breakfast at 6:00 AM (she likes toast with honey)
+- Morning walk in garden at 6:30 AM
+- Regular breakfast with group at 8:00 AM
+
+This has reduced her afternoon agitation significantly. Please maintain this routine.`,
+      category: 'participant',
+      priority: 'info',
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000), // Thursday afternoon
+      createdBy: 'Emma Williams',
+      actionRequired: false,
+      targetShift: 'morning',
+      isRead: true,
+      participantNames: ['Emma Wilson']
+    },
+    {
+      id: '5',
+      title: '📋 FOLLOW-UP: Lisa Thompson Incident from Tuesday',
+      content: `Following up on Tuesday's incident where Lisa became upset about noise during quiet time.
+
+Implemented changes:
+- Moved her quiet time to the sunroom (quieter)
+- Reduced group activities in common room between 2-4 PM
+- Lisa responded very positively
+
+FRIDAY FOLLOW-UP REQUIRED:
+- Check in with Lisa about the new arrangement
+- Document if she seems more relaxed during quiet time
+- Report back to team leader by Friday evening
+
+Clinical manager wants update for Monday meeting.`,
+      category: 'follow-up',
+      priority: 'action-required',
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000), // Thursday night
+      createdBy: 'James Martinez',
+      actionRequired: true,
+      targetShift: 'afternoon',
+      targetDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // Friday
+      isRead: false,
+      participantNames: ['Lisa Thompson']
+    },
+    {
+      id: '6',
+      title: '🏠 Weekend Activity Plan',
+      content: `Weekend activities planned:
+
+SATURDAY:
+- 10:00 AM: Trip to local markets (weather permitting)
+- 2:00 PM: Movie afternoon (participants chose "The Lion King")
+- 5:00 PM: BBQ dinner if weather is nice
+
+SUNDAY:
+- 9:00 AM: Gardening club for those interested
+- 11:00 AM: Family visits (3 families expected)
+- 3:00 PM: Arts and crafts session
+
+Shopping list for BBQ is in kitchen. Markets trip requires 2 staff minimum.`,
+      category: 'general',
+      priority: 'info',
+      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000), // Friday morning
+      createdBy: 'Sarah Johnson',
+      actionRequired: false,
+      targetShift: 'all',
+      isRead: true,
+      participantNames: []
+    },
+    {
+      id: '7',
+      title: '🍽️ Michael Brown - Updated Dietary Requirements',
+      content: `Michael's dietician has updated his meal plan due to cholesterol concerns.
+
+NEW GUIDELINES (starting this weekend):
+- Reduce red meat to once per week
+- More fish and chicken
+- Low-fat dairy products
+- More vegetables and whole grains
+- Limit fried foods
+
+Kitchen has been informed. Updated meal plan is posted in kitchen.
+
+FYI: Michael is actually excited about trying new healthy recipes!`,
+      category: 'participant',
+      priority: 'info',
+      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 1 * 60 * 60 * 1000), // Friday afternoon
+      createdBy: 'Emma Williams',
+      actionRequired: false,
+      targetShift: 'all',
+      isRead: true,
+      participantNames: ['Michael Brown']
+    },
+    {
+      id: '8',
+      title: '🌙 Quiet Night - All Participants Settled',
+      content: `Friday night shift report:
+
+OVERALL: Very quiet night, no incidents.
+
+ALL PARTICIPANTS:
+- Everyone sleeping soundly by 11:00 PM
+- All medications administered on time
+- No emergency calls
+- House temperature comfortable
+
+NOTES FOR SATURDAY MORNING:
+- Coffee machine is low on beans (enough for tomorrow but order needed)
+- Bread delivery arrives at 7:00 AM
+- Emma will be up early as usual - remember her toast!
+- Lisa's transport for hospital appointment needs confirmation
+
+Have a great Saturday!`,
+      category: 'general',
+      priority: 'info',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago (Friday night)
+      createdBy: 'Aisha Patel',
+      actionRequired: false,
+      targetShift: 'morning',
+      isRead: false,
+      participantNames: []
+    }
+  ]
+
+  // Filter and search
+  const filteredNotes = handoverNotes.filter(note => {
+    // Priority filter
+    if (selectedFilter !== 'all' && note.priority !== selectedFilter) return false
+
+    // Unread filter
+    if (showUnreadOnly && note.isRead) return false
+
+    // Search filter
+    if (searchTerm && !note.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !note.content.toLowerCase().includes(searchTerm.toLowerCase())) return false
+
+    return true
+  })
+
+  // Count unread notes by priority
+  const unreadCounts = {
+    urgent: handoverNotes.filter(n => !n.isRead && n.priority === 'urgent').length,
+    actionRequired: handoverNotes.filter(n => !n.isRead && n.priority === 'action-required').length,
+    total: handoverNotes.filter(n => !n.isRead).length
   }
-  
-  // Night shift staff
-  const nightStaff = [
-    { 
-      name: 'Emma Williams', 
-      role: 'Night Shift Lead', 
-      hours: '11:00 PM - 7:00 AM',
-      activities: ['Completed all medication rounds', 'Managed participant anxiety episode', 'Updated care plans']
-    },
-    { 
-      name: 'James Martinez', 
-      role: 'Support Worker', 
-      hours: '11:00 PM - 7:00 AM',
-      activities: ['Assisted with personal care', 'Monitored sleeping patterns', 'Prepared breakfast']
-    },
-    { 
-      name: 'Aisha Patel', 
-      role: 'Support Worker', 
-      hours: '11:00 PM - 7:00 AM',
-      activities: ['Conducted hourly checks', 'Responded to call bells', 'Documented observations']
-    }
-  ]
-  
-  // Incidents from night shift
-  const incidents = [
-    {
-      id: 'INC-001',
-      time: '2:15 AM',
-      type: 'Behavioral',
-      severity: 'Medium',
-      participant: 'James M.',
-      description: 'Participant experienced anxiety and restlessness. Unable to sleep.',
-      actions: 'Provided emotional support, offered warm milk, and used calming techniques. Participant settled by 3:00 AM.',
-      reportedBy: 'Emma Williams',
-      followUp: 'Monitor sleep patterns tonight. Consider reviewing evening routine.'
-    },
-    {
-      id: 'ABC-001',
-      time: '5:30 AM',
-      type: 'ABC Report',
-      severity: 'Low',
-      participant: 'Sarah C.',
-      antecedent: 'Woke up earlier than usual, appeared confused about time',
-      behavior: 'Attempted to leave room multiple times, mild agitation',
-      consequence: 'Staff redirected to common area, provided breakfast early, participant calmed',
-      reportedBy: 'James Martinez'
-    }
-  ]
-  
-  // Participant notes
-  const participantNotes = [
-    { name: 'James M.', status: 'stable', note: 'Slept well after initial anxiety. Morning mood positive.' },
-    { name: 'Sarah C.', status: 'monitor', note: 'Early rising pattern continues. May need schedule adjustment.' },
-    { name: 'Michael B.', status: 'good', note: 'No issues overnight. Took all medications as scheduled.' },
-    { name: 'Emma W.', status: 'good', note: 'Slept through the night. Ready for morning activities.' },
-    { name: 'David L.', status: 'stable', note: 'Brief restlessness at 1 AM, settled quickly.' },
-    { name: 'Lisa T.', status: 'good', note: 'No concerns. Excited about today\'s outing.' }
-  ]
-  
-  // Medication summary
-  const medications = [
-    { time: '11:30 PM', count: 4, completed: true, notes: 'All participants compliant' },
-    { time: '2:00 AM', count: 2, completed: true, notes: 'PRN given to James M. for anxiety' },
-    { time: '6:00 AM', count: 6, completed: true, notes: 'Morning medications prepared' }
-  ]
-  
-  // Environmental observations
-  const observations = [
-    { time: '12:00 AM', type: 'Safety', note: 'All exits secure, alarm system active' },
-    { time: '2:00 AM', type: 'Environment', note: 'Heating adjusted in west wing - was too cold' },
-    { time: '4:00 AM', type: 'Maintenance', note: 'Kitchen tap dripping - maintenance request submitted' },
-    { time: '6:30 AM', type: 'Preparation', note: 'Common areas cleaned and breakfast setup completed' }
-  ]
+
+  // Mark note as read
+  const markAsRead = (noteId: string) => {
+    // In real implementation, this would update Supabase
+    console.log('Marking note as read:', noteId)
+  }
+
+  // Format date display
+  const formatNoteDate = (date: Date) => {
+    if (isToday(date)) return 'Today'
+    if (isYesterday(date)) return 'Yesterday'
+    const days = differenceInDays(new Date(), date)
+    if (days <= 7) return `${days} days ago`
+    return format(date, 'EEEE, MMM d')
+  }
+
+  // Group notes by date
+  const notesByDate = filteredNotes.reduce((acc, note) => {
+    const dateKey = format(note.createdAt, 'yyyy-MM-dd')
+    if (!acc[dateKey]) acc[dateKey] = []
+    acc[dateKey].push(note)
+    return acc
+  }, {} as Record<string, typeof handoverNotes>)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -111,356 +320,419 @@ export default function HandoverPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-8"
+          className="mb-8"
         >
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Moon className="h-8 w-8 text-indigo-600" />
-                Night Shift Handover
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {format(nightShift.date, 'EEEE, MMMM d, yyyy')} • {nightShift.startTime} - {nightShift.endTime}
-              </p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.back()}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                  <BookOpen className="h-8 w-8 text-blue-600" />
+                  Handover Communications
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Digital handover notes - Never miss important information again
+                </p>
+              </div>
             </div>
+            <Badge variant="outline" className="px-4 py-2">
+              <Home className="h-4 w-4 mr-2" />
+              Parramatta House
+            </Badge>
           </div>
-          <Badge variant="outline" className="px-4 py-2">
-            <Home className="h-4 w-4 mr-2" />
-            {nightShift.location}
-          </Badge>
+
+          {/* Unread Alerts Banner */}
+          {(unreadCounts.urgent > 0 || unreadCounts.actionRequired > 0) && (
+            <Alert className="border-red-500 bg-red-50 animate-pulse">
+              <Bell className="h-5 w-5 text-red-600" />
+              <AlertDescription className="text-red-800 font-semibold">
+                <div className="flex items-center justify-between">
+                  <span>
+                    {unreadCounts.urgent > 0 && `${unreadCounts.urgent} URGENT`}
+                    {unreadCounts.urgent > 0 && unreadCounts.actionRequired > 0 && ' and '}
+                    {unreadCounts.actionRequired > 0 && `${unreadCounts.actionRequired} ACTION REQUIRED`}
+                    {' '}unread {(unreadCounts.urgent + unreadCounts.actionRequired) === 1 ? 'note' : 'notes'} requiring your attention!
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowUnreadOnly(true)}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Show Unread Only
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
         </motion.div>
 
-        {/* Key Metrics */}
+        {/* Stats Cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"
         >
-          <Card className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <Card className="p-4 bg-gradient-to-r from-red-500 to-red-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm">Shift Lead</p>
-                <p className="text-xl font-bold">{nightShift.shiftLead}</p>
+                <p className="text-red-100 text-sm">Urgent Notes</p>
+                <p className="text-2xl font-bold">{unreadCounts.urgent}</p>
               </div>
-              <Shield className="h-8 w-8 text-blue-200" />
+              <AlertTriangle className="h-8 w-8 text-red-200" />
             </div>
           </Card>
-          
+
           <Card className="p-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-amber-100 text-sm">Total Incidents</p>
-                <p className="text-xl font-bold">{nightShift.totalIncidents}</p>
+                <p className="text-amber-100 text-sm">Action Required</p>
+                <p className="text-2xl font-bold">{unreadCounts.actionRequired}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-amber-200" />
+              <ClipboardCheck className="h-8 w-8 text-amber-200" />
             </div>
           </Card>
-          
+
+          <Card className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm">Total Unread</p>
+                <p className="text-2xl font-bold">{unreadCounts.total}</p>
+              </div>
+              <Eye className="h-8 w-8 text-blue-200" />
+            </div>
+          </Card>
+
           <Card className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm">Medications Given</p>
-                <p className="text-xl font-bold">{nightShift.medicationsGiven}</p>
+                <p className="text-green-100 text-sm">Total Notes</p>
+                <p className="text-2xl font-bold">{handoverNotes.length}</p>
               </div>
-              <Pill className="h-8 w-8 text-green-200" />
-            </div>
-          </Card>
-          
-          <Card className="p-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm">Participants</p>
-                <p className="text-xl font-bold">{nightShift.participantsSupported}</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-200" />
+              <FileText className="h-8 w-8 text-green-200" />
             </div>
           </Card>
         </motion.div>
 
-        {/* Tabbed Content */}
+        {/* Filters and Search */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="mb-6"
         >
-          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
-            <TabsList className="grid grid-cols-5 w-full">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="incidents">Incidents</TabsTrigger>
-              <TabsTrigger value="participants">Participants</TabsTrigger>
-              <TabsTrigger value="staff">Staff Activity</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            </TabsList>
-
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-4">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-blue-600" />
-                  Shift Summary
-                </h3>
-                <div className="prose max-w-none text-gray-700">
-                  <p className="mb-4">
-                    The night shift proceeded with minimal disruptions. Two incidents were recorded and appropriately managed. 
-                    All scheduled medications were administered on time with full compliance.
-                  </p>
-                  <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4">
-                    <p className="font-semibold text-amber-800">Key Points for Day Shift:</p>
-                    <ul className="mt-2 space-y-1 text-amber-700">
-                      <li>• James M. had anxiety episode at 2:15 AM - monitor mood today</li>
-                      <li>• Sarah C. continuing early rising pattern - consider schedule review</li>
-                      <li>• Kitchen tap needs maintenance attention</li>
-                      <li>• All participants ready for morning activities</li>
-                    </ul>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="p-6">
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <Pill className="h-5 w-5 text-green-600" />
-                    Medication Rounds
-                  </h4>
-                  <div className="space-y-3">
-                    {medications.map((round, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Clock className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium">{round.time}</span>
-                          <Badge variant="outline">{round.count} meds</Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {round.completed && <CheckCircle className="h-4 w-4 text-green-500" />}
-                          <span className="text-sm text-gray-600">{round.notes}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-
-                <Card className="p-6">
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <Info className="h-5 w-5 text-blue-600" />
-                    Environmental Notes
-                  </h4>
-                  <div className="space-y-3">
-                    {observations.map((obs, index) => (
-                      <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <Badge variant="secondary" className="mt-0.5">{obs.type}</Badge>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{obs.time}</p>
-                          <p className="text-sm text-gray-600">{obs.note}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+          <Card className="p-4">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={selectedFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedFilter('all')}
+                >
+                  All Notes
+                </Button>
+                <Button
+                  variant={selectedFilter === 'urgent' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedFilter('urgent')}
+                  className={selectedFilter === 'urgent' ? 'bg-red-600' : ''}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-1" />
+                  Urgent
+                </Button>
+                <Button
+                  variant={selectedFilter === 'action-required' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedFilter('action-required')}
+                  className={selectedFilter === 'action-required' ? 'bg-amber-600' : ''}
+                >
+                  <ClipboardCheck className="h-4 w-4 mr-1" />
+                  Action Required
+                </Button>
+                <Button
+                  variant={selectedFilter === 'info' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedFilter('info')}
+                >
+                  <Info className="h-4 w-4 mr-1" />
+                  Info
+                </Button>
+                <Button
+                  variant={showUnreadOnly ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+                >
+                  {showUnreadOnly ? <Eye className="h-4 w-4 mr-1" /> : <EyeOff className="h-4 w-4 mr-1" />}
+                  {showUnreadOnly ? 'Showing Unread' : 'Show Unread Only'}
+                </Button>
               </div>
-            </TabsContent>
 
-            {/* Incidents Tab */}
-            <TabsContent value="incidents" className="space-y-4">
-              {incidents.map((incident) => (
-                <Card key={incident.id} className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Badge variant={incident.severity === 'Medium' ? 'default' : 'secondary'}>
-                        {incident.type}
-                      </Badge>
-                      <span className="text-sm text-gray-600">{incident.time}</span>
-                      <span className="font-medium">{incident.participant}</span>
-                    </div>
-                    <Badge variant="outline" className={
-                      incident.severity === 'Medium' ? 'border-amber-500 text-amber-700' : 'border-gray-300'
-                    }>
-                      {incident.severity} Priority
-                    </Badge>
-                  </div>
-                  
-                  {incident.type === 'ABC Report' ? (
-                    <div className="space-y-3">
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <p className="text-sm font-semibold text-blue-800">Antecedent:</p>
-                        <p className="text-sm text-blue-700">{incident.antecedent}</p>
-                      </div>
-                      <div className="bg-amber-50 p-3 rounded-lg">
-                        <p className="text-sm font-semibold text-amber-800">Behavior:</p>
-                        <p className="text-sm text-amber-700">{incident.behavior}</p>
-                      </div>
-                      <div className="bg-green-50 p-3 rounded-lg">
-                        <p className="text-sm font-semibold text-green-800">Consequence:</p>
-                        <p className="text-sm text-green-700">{incident.consequence}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-700">Description:</p>
-                        <p className="text-sm text-gray-600">{incident.description}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-700">Actions Taken:</p>
-                        <p className="text-sm text-gray-600">{incident.actions}</p>
-                      </div>
-                      {incident.followUp && (
-                        <Alert className="border-blue-200 bg-blue-50">
-                          <Info className="h-4 w-4 text-blue-600" />
-                          <AlertDescription className="text-blue-800">
-                            <span className="font-semibold">Follow-up Required:</span> {incident.followUp}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Reported by: {incident.reportedBy}</span>
-                    <span className="text-sm text-gray-500">Report ID: {incident.id}</span>
-                  </div>
-                </Card>
-              ))}
-            </TabsContent>
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search handover notes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </motion.div>
 
-            {/* Participants Tab */}
-            <TabsContent value="participants" className="space-y-4">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Participant Status Overview</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {participantNotes.map((participant, index) => (
-                    <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">{participant.name}</h4>
-                        <Badge variant={
-                          participant.status === 'good' ? 'default' : 
-                          participant.status === 'monitor' ? 'secondary' : 'outline'
-                        } className={
-                          participant.status === 'good' ? 'bg-green-100 text-green-800' :
-                          participant.status === 'monitor' ? 'bg-amber-100 text-amber-800' : ''
-                        }>
-                          {participant.status === 'good' ? 'All Good' :
-                           participant.status === 'monitor' ? 'Monitor' : 'Stable'}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600">{participant.note}</p>
+        {/* Timeline View */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-6"
+        >
+          <div className="flex items-center gap-2 text-gray-600">
+            <Clock className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">Handover Timeline - Last 7 Days</h2>
+            <Badge variant="outline" className="ml-2">
+              {filteredNotes.length} {filteredNotes.length === 1 ? 'note' : 'notes'}
+            </Badge>
+          </div>
+
+          <div className="relative">
+            {/* Notes grouped by date */}
+            {Object.keys(notesByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime()).map((dateKey, dateIndex) => {
+              const notes = notesByDate[dateKey]
+              const noteDate = new Date(dateKey)
+
+              return (
+                <div key={dateKey} className="mb-8">
+                  {/* Date Header */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="bg-blue-600 text-white px-4 py-2 rounded-full font-semibold flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {formatNoteDate(noteDate)}
                     </div>
-                  ))}
+                    <div className="text-sm text-gray-500">
+                      {format(noteDate, 'EEEE, MMMM d, yyyy')}
+                    </div>
+                  </div>
+
+                  {/* Notes for this date */}
+                  <div className="space-y-4 md:ml-20">
+                    <AnimatePresence>
+                      {notes.map((note, noteIndex) => {
+                        const priorityBadge = getPriorityBadge(note.priority)
+                        const CategoryIcon = getCategoryIcon(note.category)
+
+                        return (
+                          <motion.div
+                            key={note.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ delay: noteIndex * 0.05 }}
+                          >
+                            <Card className={`
+                              p-6 cursor-pointer transition-all hover:shadow-lg
+                              ${!note.isRead ? 'border-l-4 border-l-blue-600 bg-blue-50/50' : ''}
+                              ${note.priority === 'urgent' ? 'border-2 border-red-300' : ''}
+                              ${note.priority === 'action-required' ? 'border-2 border-amber-300' : ''}
+                            `}
+                            onClick={() => setSelectedNote(note.id === selectedNote ? null : note.id)}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-4 flex-1">
+                                  {/* Category Icon */}
+                                  <div className={`
+                                    w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0
+                                    ${note.priority === 'urgent' ? 'bg-red-100' :
+                                      note.priority === 'action-required' ? 'bg-amber-100' : 'bg-blue-100'}
+                                  `}>
+                                    <CategoryIcon className={`h-6 w-6
+                                      ${note.priority === 'urgent' ? 'text-red-600' :
+                                        note.priority === 'action-required' ? 'text-amber-600' : 'text-blue-600'}
+                                    `} />
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    {/* Title */}
+                                    <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                                      {note.title}
+                                      {!note.isRead && (
+                                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                          NEW
+                                        </Badge>
+                                      )}
+                                    </h3>
+
+                                    {/* Metadata */}
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                      <Badge className={priorityBadge.color}>
+                                        <priorityBadge.icon className="h-3 w-3 mr-1" />
+                                        {priorityBadge.label}
+                                      </Badge>
+
+                                      <Badge variant="outline">
+                                        <User className="h-3 w-3 mr-1" />
+                                        {note.createdBy}
+                                      </Badge>
+
+                                      <Badge variant="outline">
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        {format(note.createdAt, 'h:mm a')}
+                                      </Badge>
+
+                                      {note.targetShift && (
+                                        <Badge variant="outline" className="bg-purple-50">
+                                          <Target className="h-3 w-3 mr-1" />
+                                          {note.targetShift.charAt(0).toUpperCase() + note.targetShift.slice(1)} Shift
+                                        </Badge>
+                                      )}
+
+                                      {note.participantNames && note.participantNames.length > 0 && (
+                                        <Badge variant="outline" className="bg-green-50">
+                                          <Users className="h-3 w-3 mr-1" />
+                                          {note.participantNames.join(', ')}
+                                        </Badge>
+                                      )}
+                                    </div>
+
+                                    {/* Content Preview */}
+                                    <p className={`
+                                      text-gray-700 whitespace-pre-wrap
+                                      ${selectedNote === note.id ? '' : 'line-clamp-3'}
+                                    `}>
+                                      {note.content}
+                                    </p>
+
+                                    {/* Action Deadline */}
+                                    {note.actionDeadline && (
+                                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <div className="flex items-center gap-2 text-amber-800 font-semibold">
+                                          <AlertCircle className="h-4 w-4" />
+                                          Action Deadline: {format(note.actionDeadline, 'EEEE, MMMM d')} at 9:00 AM
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex flex-col gap-2">
+                                  {!note.isRead && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        markAsRead(note.id)
+                                      }}
+                                      className="whitespace-nowrap"
+                                    >
+                                      <Check className="h-4 w-4 mr-1" />
+                                      Mark Read
+                                    </Button>
+                                  )}
+                                  {note.isRead && (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Read
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </Card>
+                          </motion.div>
+                        )
+                      })}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </Card>
-            </TabsContent>
+              )
+            })}
+          </div>
 
-            {/* Staff Activity Tab */}
-            <TabsContent value="staff" className="space-y-4">
-              {nightStaff.map((staff, index) => (
-                <Card key={index} className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h4 className="text-lg font-semibold">{staff.name}</h4>
-                      <p className="text-gray-600">{staff.role} • {staff.hours}</p>
-                    </div>
-                    <Badge variant="outline" className="bg-green-50">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Shift Completed
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-medium text-sm text-gray-700">Key Activities:</p>
-                    <ul className="space-y-1">
-                      {staff.activities.map((activity, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                          {activity}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </Card>
-              ))}
-            </TabsContent>
-
-            {/* Timeline Tab */}
-            <TabsContent value="timeline" className="space-y-4">
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Night Shift Timeline</h3>
-                <div className="relative">
-                  <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-                  <div className="space-y-6">
-                    {[
-                      { time: '11:00 PM', event: 'Shift started', icon: Clock, color: 'blue' },
-                      { time: '11:30 PM', event: 'First medication round completed', icon: Pill, color: 'green' },
-                      { time: '12:00 AM', event: 'Security check completed', icon: Shield, color: 'blue' },
-                      { time: '2:00 AM', event: 'Heating adjusted in west wing', icon: Thermometer, color: 'orange' },
-                      { time: '2:15 AM', event: 'Incident: James M. anxiety episode', icon: AlertTriangle, color: 'amber' },
-                      { time: '3:00 AM', event: 'James M. settled and sleeping', icon: CheckCircle, color: 'green' },
-                      { time: '4:00 AM', event: 'Maintenance request submitted', icon: Settings, color: 'gray' },
-                      { time: '5:30 AM', event: 'ABC Report: Sarah C. early rising', icon: FileText, color: 'amber' },
-                      { time: '6:00 AM', event: 'Morning medications prepared', icon: Pill, color: 'green' },
-                      { time: '6:30 AM', event: 'Breakfast preparation completed', icon: Activity, color: 'blue' },
-                      { time: '7:00 AM', event: 'Shift handover completed', icon: Users, color: 'green' }
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-start gap-4">
-                        <div className={`
-                          w-16 h-16 rounded-full flex items-center justify-center
-                          ${item.color === 'blue' ? 'bg-blue-100' :
-                            item.color === 'green' ? 'bg-green-100' :
-                            item.color === 'amber' ? 'bg-amber-100' :
-                            item.color === 'orange' ? 'bg-orange-100' :
-                            'bg-gray-100'}
-                        `}>
-                          <item.icon className={`h-6 w-6
-                            ${item.color === 'blue' ? 'text-blue-600' :
-                              item.color === 'green' ? 'text-green-600' :
-                              item.color === 'amber' ? 'text-amber-600' :
-                              item.color === 'orange' ? 'text-orange-600' :
-                              'text-gray-600'}
-                          `} />
-                        </div>
-                        <div className="flex-1 pt-4">
-                          <p className="font-semibold text-gray-900">{item.time}</p>
-                          <p className="text-gray-600">{item.event}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          {/* Empty State */}
+          {filteredNotes.length === 0 && (
+            <Card className="p-12 text-center">
+              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No handover notes found</h3>
+              <p className="text-gray-500 mb-4">
+                {showUnreadOnly ? 'All notes have been read!' :
+                 searchTerm ? 'Try adjusting your search or filters' :
+                 'No handover notes match your current filters'}
+              </p>
+              {(showUnreadOnly || searchTerm || selectedFilter !== 'all') && (
+                <Button
+                  onClick={() => {
+                    setShowUnreadOnly(false)
+                    setSearchTerm('')
+                    setSelectedFilter('all')
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Clear All Filters
+                </Button>
+              )}
+            </Card>
+          )}
         </motion.div>
 
         {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.4 }}
           className="mt-8 flex justify-between items-center"
         >
-          <div className="flex gap-4">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              Contact Night Staff
-            </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Add Day Shift Note
-            </Button>
-          </div>
-          <Button 
+          <Button
+            variant="outline"
             onClick={() => router.push('/shift-start')}
             className="flex items-center gap-2"
           >
-            Start Your Shift
-            <ArrowLeft className="h-4 w-4 rotate-180" />
+            <ArrowLeft className="h-4 w-4" />
+            Back to Shift Start
           </Button>
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Archive className="h-4 w-4" />
+              View Archived
+            </Button>
+            <Button className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Create New Handover Note
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Help Box */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8"
+        >
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-5 w-5 text-blue-600" />
+            <AlertDescription className="text-blue-900">
+              <strong>Why This Matters:</strong> Unlike the paper book where notes can be missed when staff don't flip back through pages,
+              this digital system shows ALL handover notes from the past week in one timeline. Urgent and action-required notes are
+              highlighted, and you can't start your shift until you've acknowledged reading the urgent ones. No more missed appointments or forgotten tasks!
+            </AlertDescription>
+          </Alert>
         </motion.div>
       </div>
     </div>

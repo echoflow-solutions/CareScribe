@@ -11,8 +11,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
-import { 
-  Mic, Bell, Home, FileText, BarChart3, Users, 
+import {
+  Mic, Bell, Home, FileText, BarChart3, Users,
   Settings, LogOut, ChevronRight, AlertCircle,
   Smile, Frown, Meh, Moon, Camera, Clock, Pill,
   TrendingUp, Shield, Wand2, AlertTriangle,
@@ -20,7 +20,9 @@ import {
   Siren, BellOff, CheckCircle, Activity,
   Calendar, MapPin, Phone, Mail, Heart,
   Stethoscope, ClipboardList, MessageSquare,
-  MicOff, Pause, Play, Square, Send
+  MicOff, Pause, Play, Square, Send,
+  UserPlus, CheckSquare, XCircle, Eye, Edit3,
+  BarChart, PieChart, TrendingDown, Award, Target
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { DataService } from '@/lib/data/service'
@@ -28,6 +30,7 @@ import { format } from 'date-fns'
 import { Participant } from '@/lib/types'
 import { DemoControls } from '@/components/demo-controls'
 import { AuthGuard } from '@/components/auth/auth-guard'
+import { TeamLeaderDashboard } from '@/components/team-leader/team-leader-dashboard'
 
 function DashboardContent() {
   const router = useRouter()
@@ -46,6 +49,14 @@ function DashboardContent() {
   const [showDemoControls, setShowDemoControls] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const notificationsRef = useRef<HTMLDivElement>(null)
+
+  // Team Leader specific state
+  const [teamStaff, setTeamStaff] = useState<any[]>([])
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
+  const [teamIncidents, setTeamIncidents] = useState<any[]>([])
+  const [shiftSchedule, setShiftSchedule] = useState<any[]>([])
+  const [showApprovalModal, setShowApprovalModal] = useState(false)
+  const [selectedApproval, setSelectedApproval] = useState<any>(null)
   
   // Participant detail modal state
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null)
@@ -248,6 +259,101 @@ function DashboardContent() {
     ])
     setParticipants(participantData)
     setAlerts(alertData.filter(a => !a.acknowledged))
+
+    // Load Team Leader specific data
+    if (currentUser && currentUser.role.level === 3) {
+      await loadTeamLeaderData()
+    }
+  }
+
+  const loadTeamLeaderData = async () => {
+    try {
+      // Load all users/staff
+      const allUsers = await DataService.getUsers()
+      // Filter to Support Workers (level 4) in the same facility
+      const staffMembers = allUsers.filter(u =>
+        u.role.level === 4 && u.facilityId === currentUser?.facilityId
+      )
+
+      // Enrich with mock shift data for demo
+      const enrichedStaff = staffMembers.map((staff, index) => ({
+        ...staff,
+        clockedIn: index < 2, // First 2 are clocked in
+        currentLocation: index === 0 ? 'Living Room' : index === 1 ? 'Kitchen' : 'Not On Duty',
+        shiftStart: index < 2 ? '7:00 AM' : null,
+        shiftEnd: index < 2 ? '3:00 PM' : null,
+        lastActivity: new Date(Date.now() - (index + 1) * 5 * 60 * 1000) // 5, 10, 15 mins ago
+      }))
+
+      setTeamStaff(enrichedStaff)
+
+      // Load today's shifts for facility (using available method)
+      const today = new Date().toISOString().split('T')[0]
+      // Use getShiftsByDateRange with today as both start and end date
+      const todayShifts = await DataService.getUsers() // For now, we'll use user data for shift display
+      setShiftSchedule(todayShifts || [])
+
+      // Load all incidents for facility for Team Leader review
+      const allIncidents = await DataService.getIncidents()
+      setTeamIncidents(allIncidents)
+
+      // Create mock pending approvals for demo
+      setPendingApprovals([
+        {
+          id: '1',
+          type: 'shift_handover',
+          staffName: 'Bernard Adjei',
+          staffId: '1',
+          timestamp: new Date(Date.now() - 30 * 60 * 1000),
+          content: 'Morning shift completed. James had a minor behavioral incident at 10:30 AM but responded well to intervention. All medications administered on time. Sarah participated in group activity. No concerns.',
+          priority: 'high'
+        },
+        {
+          id: '2',
+          type: 'incident_report',
+          staffName: 'Dermot Roche',
+          staffId: '5',
+          timestamp: new Date(Date.now() - 15 * 60 * 1000),
+          content: 'Behavioral incident - Michael B. showing signs of anxiety during afternoon activity. Intervention: Removed to quiet space, offered sensory tools. Outcome: Calmed within 15 minutes.',
+          priority: 'urgent',
+          participantName: 'Michael Brown'
+        }
+      ])
+    } catch (error) {
+      console.error('Error loading Team Leader data:', error)
+    }
+  }
+
+  const handleApproveAction = (id: string, type: string) => {
+    console.log(`Approved ${type} with ID: ${id}`)
+    // Remove from pending approvals
+    setPendingApprovals(prev => prev.filter(a => a.id !== id))
+    // Show success notification
+    setNotifications(prev => [{
+      id: `notif-${Date.now()}`,
+      type: 'system' as const,
+      priority: 'medium' as const,
+      title: 'Approval Confirmed',
+      message: `${type === 'shift_handover' ? 'Shift handover' : 'Incident report'} has been approved`,
+      time: new Date(),
+      read: false
+    }, ...prev])
+  }
+
+  const handleRejectAction = (id: string, type: string, reason: string) => {
+    console.log(`Rejected ${type} with ID: ${id}, reason: ${reason}`)
+    // Remove from pending approvals
+    setPendingApprovals(prev => prev.filter(a => a.id !== id))
+    // Show notification
+    setNotifications(prev => [{
+      id: `notif-${Date.now()}`,
+      type: 'system' as const,
+      priority: 'medium' as const,
+      title: 'Rejection Recorded',
+      message: `${type === 'shift_handover' ? 'Shift handover' : 'Incident report'} has been rejected`,
+      time: new Date(),
+      read: false
+    }, ...prev])
   }
 
   const getStatusIcon = (status: string) => {
@@ -514,6 +620,17 @@ function DashboardContent() {
               animate={{ opacity: 1 }}
               className="space-y-6"
             >
+              {/* Team Leader Dashboard - Only for Team Leaders */}
+              {currentUser && currentUser.role.level === 3 && (
+                <TeamLeaderDashboard
+                  teamStaff={teamStaff}
+                  pendingApprovals={pendingApprovals}
+                  teamIncidents={teamIncidents}
+                  onApprove={handleApproveAction}
+                  onReject={handleRejectAction}
+                />
+              )}
+
               {/* Current Status */}
               <div>
                 <h2 className="text-lg font-semibold mb-4">Current Status - All Participants</h2>

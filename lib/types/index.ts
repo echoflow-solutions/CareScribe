@@ -318,3 +318,345 @@ export interface Shift {
   handoverNotes?: string
   status: 'scheduled' | 'active' | 'completed'
 }
+
+// Billing & Invoice Types
+export interface BillingRecord {
+  id: string
+  billingId: string // Generated unique billing ID
+  reportId: string // Link to incident or ABC report
+  reportType: 'incident' | 'abc' | 'combined'
+  participantId: string
+  participantName: string
+  facilityId: string
+  dateOfService: string
+  amount: number
+  serviceCode?: string // NDIS service code
+  description: string
+  status: 'pending' | 'submitted' | 'approved' | 'paid' | 'disputed' | 'cancelled'
+  submittedAt?: string
+  submittedBy?: string
+  submittedTo?: string // Finance department/system
+  approvedAt?: string
+  approvedBy?: string
+  paidAt?: string
+  notes?: string
+  invoiceNumber?: string
+  paymentReference?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BillingAttachment {
+  id: string
+  billingRecordId: string
+  fileName: string
+  fileUrl: string
+  fileType: string
+  uploadedAt: string
+  uploadedBy: string
+}
+
+// Report Escalation & Workflow Types
+export interface ReportEscalation {
+  id: string
+  reportId: string
+  reportType: 'incident' | 'abc'
+  participantId: string
+  participantName: string
+  facilityId: string
+  currentStage: EscalationStage
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  assignedTo?: string
+  assignedToName?: string
+  dueDate?: string
+  completedStages: CompletedStage[]
+  timeline: EscalationEvent[]
+  status: 'in_progress' | 'completed' | 'escalated' | 'on_hold'
+  createdAt: string
+  updatedAt: string
+}
+
+export type EscalationStage =
+  | 'report_entry'
+  | 'provider_notification'
+  | 'follow_up'
+  | 'support_workers'
+  | 'complete_report'
+  | 'send_to_stakeholders'
+  | 'notify_stakeholders'
+  | 'additional_follow_up'
+  | 'review_and_close'
+
+export interface CompletedStage {
+  stage: EscalationStage
+  completedAt: string
+  completedBy: string
+  completedByName: string
+  notes?: string
+  duration?: number // in minutes
+}
+
+export interface EscalationEvent {
+  id: string
+  reportEscalationId: string
+  eventType: 'stage_change' | 'assignment' | 'comment' | 'escalation' | 'reminder'
+  stage?: EscalationStage
+  performedBy: string
+  performedByName: string
+  description: string
+  timestamp: string
+  metadata?: Record<string, any>
+}
+
+export interface EscalationStageDefinition {
+  stage: EscalationStage
+  name: string
+  description: string
+  order: number
+  requiredAction: string
+  estimatedDuration: number // in minutes
+  responsible: string[] // Role types
+  notifyOnComplete: string[] // Role types to notify
+  canSkip: boolean
+  automationAvailable: boolean
+}
+
+// Audit Trail Types
+export interface AuditLog {
+  id: string
+  entityType: 'incident' | 'participant' | 'medication' | 'billing' | 'user' | 'shift'
+  entityId: string
+  action: 'create' | 'update' | 'delete' | 'submit' | 'approve' | 'reject' | 'export'
+  performedBy: string
+  performedByName: string
+  timestamp: string
+  changes?: AuditChange[]
+  metadata?: Record<string, any>
+  ipAddress?: string
+  userAgent?: string
+}
+
+export interface AuditChange {
+  field: string
+  oldValue: any
+  newValue: any
+}
+
+// Document Library Types
+export interface Document {
+  id: string
+  title: string
+  description?: string
+  category: 'policy' | 'procedure' | 'form' | 'template' | 'training' | 'compliance' | 'other'
+  fileUrl: string
+  fileName: string
+  fileSize: number // in bytes
+  fileType: string
+  version: string
+  tags: string[]
+  facilityId?: string
+  uploadedBy: string
+  uploadedByName: string
+  uploadedAt: string
+  lastAccessedAt?: string
+  accessCount: number
+  isArchived: boolean
+  expiryDate?: string
+  requiresAcknowledgment: boolean
+  acknowledgedBy?: string[]
+}
+
+// Analytics Types
+export interface AnalyticsSummary {
+  period: 'day' | 'week' | 'month' | 'quarter' | 'year'
+  startDate: string
+  endDate: string
+  totalIncidents: number
+  incidentsByType: Record<string, number>
+  incidentsBySeverity: Record<string, number>
+  participantStats: ParticipantStats[]
+  staffStats: StaffStats[]
+  trends: Trend[]
+}
+
+export interface ParticipantStats {
+  participantId: string
+  participantName: string
+  incidentCount: number
+  trend: 'increasing' | 'stable' | 'decreasing'
+  riskLevel: 'low' | 'medium' | 'high'
+}
+
+export interface StaffStats {
+  staffId: string
+  staffName: string
+  reportsSubmitted: number
+  avgResponseTime: number // in minutes
+  incidentsHandled: number
+}
+
+export interface Trend {
+  metric: string
+  value: number
+  change: number // percentage change
+  direction: 'up' | 'down' | 'stable'
+  timestamp: string
+}
+
+// Restrictive Practices Types (NDIS Compliance)
+export interface RestrictivePractice {
+  id: string
+  participantId: string
+  participantName: string
+  type: 'chemical' | 'physical' | 'environmental' | 'mechanical'
+  description: string
+  medication?: string // For chemical restraints
+  dosage?: string // For chemical restraints
+  authorization: RestrictivePracticeAuthorization
+  reductionPlan: ReductionPlan
+  usage: RestrictivePracticeUsage
+  reportedToNDIS: boolean
+  lastReportDate?: string
+  nextReportDue: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  facilityId?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface RestrictivePracticeAuthorization {
+  authorizedBy: string
+  authorizationDate: string
+  expiryDate: string
+  reviewDate: string
+  status: 'active' | 'expired' | 'pending-renewal'
+  authorizingBodyName?: string
+  authorizationReference?: string
+}
+
+export interface ReductionPlan {
+  hasReductionPlan: boolean
+  goalDescription?: string
+  strategies?: string[]
+  targetDate?: string
+  progress?: number // 0-100 percentage
+  lastReviewedDate?: string
+  nextReviewDate?: string
+}
+
+export interface RestrictivePracticeUsage {
+  lastUsed?: string
+  frequency: number // times used in current period
+  trend: 'increasing' | 'decreasing' | 'stable'
+  averageFrequency?: number
+  notes?: string
+}
+
+// Vehicle & Transport Management Types
+export interface Vehicle {
+  id: string
+  registration: string
+  make: string
+  model: string
+  year: number
+  color: string
+  capacity: number
+  wheelchairAccessible: boolean
+  status: 'available' | 'in-use' | 'maintenance' | 'out-of-service'
+  odometer: number
+  nextService: string
+  insuranceExpiry: string
+  registrationExpiry: string
+  fuelCard: FuelCard
+  assignedFacility: string
+  facilityId?: string
+  lastInspection: string
+  vinNumber?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface FuelCard {
+  number: string
+  limit: number
+  currentSpend: number
+  provider?: string
+}
+
+export interface VehicleBooking {
+  id: string
+  vehicleId: string
+  vehicleReg: string
+  driverId: string
+  driverName: string
+  participantId?: string
+  participantName?: string
+  purpose: string
+  destination: string
+  startDate: string
+  endDate: string
+  startOdometer?: number
+  endOdometer?: number
+  kilometers?: number
+  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled'
+  fuelCost?: number
+  tollsCost?: number
+  parkingCost?: number
+  totalCost?: number
+  notes?: string
+  facilityId?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface VehicleMaintenanceRecord {
+  id: string
+  vehicleId: string
+  vehicleReg?: string
+  type: 'service' | 'repair' | 'inspection' | 'cleaning' | 'tire-change'
+  description: string
+  date: string
+  scheduledDate?: string
+  cost: number
+  provider: string
+  providerContact?: string
+  odometer?: number
+  nextServiceDue?: string
+  partsReplaced?: string[]
+  status: 'completed' | 'scheduled' | 'overdue'
+  invoiceNumber?: string
+  notes?: string
+  facilityId?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface VehicleIncident {
+  id: string
+  vehicleId: string
+  vehicleReg: string
+  driverId: string
+  driverName: string
+  date: string
+  location: string
+  type: 'accident' | 'breakdown' | 'traffic-violation' | 'damage' | 'near-miss'
+  description: string
+  severity: 'minor' | 'moderate' | 'major'
+  policeReport: boolean
+  policeReportNumber?: string
+  insuranceClaim: boolean
+  insuranceClaimNumber?: string
+  witnessesPresent: boolean
+  witnessDetails?: string
+  participantInvolved?: boolean
+  participantId?: string
+  participantName?: string
+  injuriesReported: boolean
+  injuryDetails?: string
+  photos?: string[]
+  repairCost?: number
+  status: 'reported' | 'under-investigation' | 'resolved' | 'closed'
+  facilityId?: string
+  createdAt?: string
+  updatedAt?: string
+}

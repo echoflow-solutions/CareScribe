@@ -3,7 +3,9 @@ import { Database } from './database.types'
 import {
   User, Participant, Incident, Alert, Organization,
   RoutingRule, Shift, Role, WebsterPack, WebsterPackSlot,
-  MedicationDiscrepancy, PharmacyIntegration, PharmacySyncLog
+  MedicationDiscrepancy, PharmacyIntegration, PharmacySyncLog,
+  BillingRecord, ReportEscalation, EscalationEvent, CompletedStage,
+  Document, AuditLog, AnalyticsSummary, ParticipantStats, StaffStats
 } from '@/lib/types'
 
 type Tables = Database['public']['Tables']
@@ -43,7 +45,7 @@ export class SupabaseService {
   // User methods
   static async getUsers(): Promise<User[]> {
     if (!this.isAvailable()) return []
-    
+
     const { data, error } = await supabase!
       .from('users')
       .select(`
@@ -51,12 +53,12 @@ export class SupabaseService {
         role:roles(*)
       `)
       .order('name')
-    
+
     if (error) {
       console.error('Error fetching users:', error)
       return []
     }
-    
+
     return data.map(user => ({
       id: user.id,
       email: user.email,
@@ -76,6 +78,45 @@ export class SupabaseService {
       avatar: user.avatar || undefined,
       createdAt: user.created_at
     }))
+  }
+
+  // Get or create staff record for a user
+  static async getOrCreateStaffRecord(userId: string, userName: string, userEmail: string, userRole: string = 'Support Worker'): Promise<{ id: string } | null> {
+    if (!this.isAvailable()) return null
+
+    // First try to find existing staff record
+    const { data: existingStaff, error: findError } = await supabase!
+      .from('staff')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (existingStaff) {
+      console.log('✅ [SupabaseService] Found existing staff record:', existingStaff.id)
+      return existingStaff
+    }
+
+    // If no staff record exists, create one
+    console.log('ℹ️ [SupabaseService] Creating new staff record for user:', userName)
+    const { data: newStaff, error: createError } = await supabase!
+      .from('staff')
+      .insert({
+        user_id: userId,
+        name: userName,
+        email: userEmail,
+        role: userRole,
+        status: 'active'
+      })
+      .select('id')
+      .single()
+
+    if (createError) {
+      console.error('❌ [SupabaseService] Error creating staff record:', createError)
+      return null
+    }
+
+    console.log('✅ [SupabaseService] Created new staff record:', newStaff.id)
+    return newStaff
   }
 
   static async getUserByEmail(email: string): Promise<User | null> {
@@ -224,6 +265,13 @@ export class SupabaseService {
   static async getShiftParticipants(shiftId: string): Promise<Participant[]> {
     if (!this.isAvailable()) return []
 
+    // Validate shift ID is a proper UUID before querying
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(shiftId)) {
+      // Silent return for demo/local shift IDs (e.g., "clock-user123")
+      return []
+    }
+
     const { data, error } = await supabase!
       .from('shift_participants')
       .select(`
@@ -311,13 +359,10 @@ export class SupabaseService {
   static async getIncidents(facilityId?: string): Promise<Incident[]> {
     if (!this.isAvailable()) return []
 
+    // Simplified query without joins to avoid relationship errors
     let query = supabase!
       .from('incidents')
-      .select(`
-        *,
-        participant:participants(name),
-        staff:users(name)
-      `)
+      .select('*')
 
     // Only filter by facility_id if it's a valid UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -326,22 +371,45 @@ export class SupabaseService {
     }
 
     const { data, error } = await query.order('created_at', { ascending: false })
-    
+
     if (error) {
       console.error('Error fetching incidents:', error)
       return []
     }
-    
+
+    // Fetch participants and users separately to get names
+    const participantIds = [...new Set(data.map(i => i.participant_id).filter(Boolean))]
+    const staffIds = [...new Set(data.map(i => i.staff_id).filter(Boolean))]
+
+    const participantsMap = new Map<string, string>()
+    const staffMap = new Map<string, string>()
+
+    if (participantIds.length > 0) {
+      const { data: participants } = await supabase!
+        .from('participants')
+        .select('id, name')
+        .in('id', participantIds)
+      participants?.forEach(p => participantsMap.set(p.id, p.name))
+    }
+
+    if (staffIds.length > 0) {
+      const { data: staff } = await supabase!
+        .from('users')
+        .select('id, name')
+        .in('id', staffIds)
+      staff?.forEach(s => staffMap.set(s.id, s.name))
+    }
+
     return data.map(i => ({
       id: i.id,
       participantId: i.participant_id || '',
-      participantName: i.participant?.name || 'Unknown',
+      participantName: participantsMap.get(i.participant_id) || 'Unknown',
       type: i.type as any,
       severity: i.severity as any,
       timestamp: i.created_at,
       location: i.location || '',
       staffId: i.staff_id || '',
-      staffName: i.staff?.name || 'Unknown',
+      staffName: staffMap.get(i.staff_id) || 'Unknown',
       description: i.description || '',
       antecedent: i.antecedent || '',
       behavior: i.behavior || '',
@@ -458,43 +526,64 @@ export class SupabaseService {
   }
 
   // Shift methods
-  static async getCurrentShift(staffId: string): Promise<Shift | null> {
+  static async getCurrentShift(userId: string): Promise<Shift | null> {
     if (!this.isAvailable()) return null
 
-    const { data, error } = await supabase!
-      .from('shifts')
-      .select('*')
-      .eq('staff_id', staffId)
-      .eq('status', 'active')
-      .order('start_time', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (error || !data) return null
-
-    return {
-      id: data.id,
-      staffId: data.staff_id || '',
-      facilityId: data.facility_id || '',
-      startTime: data.start_time,
-      endTime: data.end_time || '',
-      handoverNotes: data.handover_notes || undefined,
-      status: data.status as any
-    }
+    // System uses user_clock_status table for shift management, not shifts table
+    // This function is kept for backward compatibility but returns null
+    // Actual shift state is managed client-side using Zustand store
+    return null
   }
 
-  static async createShift(shift: Omit<Shift, 'id'>): Promise<Shift> {
+  static async createShift(shift: Omit<Shift, 'id'>, userName?: string, userEmail?: string, userRole?: string): Promise<Shift> {
     if (!this.isAvailable()) {
       throw new Error('Supabase not available')
     }
 
-    const { data, error } = await supabase!
+    // Look up staff record by user_id to get the actual staff_id
+    const { data: staffRecord, error: staffError } = await supabase!
+      .from('staff')
+      .select('id, name, role')
+      .eq('user_id', shift.staffId)
+      .single()
+
+    if (staffError || !staffRecord) {
+      console.error('❌ Staff record not found for user_id:', shift.staffId, staffError)
+      throw new Error('Staff record not found for this user')
+    }
+
+    console.log('✅ Found staff record:', staffRecord.id, 'for user:', shift.staffId)
+
+    // Parse the ISO timestamps
+    const startDate = new Date(shift.startTime)
+    const endDate = new Date(shift.endTime)
+
+    // Extract date and time components for database schema
+    const shiftDate = startDate.toISOString().split('T')[0] // "2025-10-06"
+    const startTime = startDate.toTimeString().split(' ')[0] // "07:00:00"
+    const endTime = endDate.toTimeString().split(' ')[0] // "15:00:00"
+
+    // Determine shift type based on start hour
+    const startHour = startDate.getHours()
+    let shiftType: 'morning' | 'afternoon' | 'night' = 'morning'
+    if (startHour >= 14 && startHour < 22) shiftType = 'afternoon'
+    else if (startHour >= 22 || startHour < 6) shiftType = 'night'
+
+    // Use the staff record ID (not user ID) as staff_id
+    const { data, error} = await supabase!
       .from('shifts')
       .insert({
-        staff_id: shift.staffId,
+        staff_id: staffRecord.id, // Use staff record ID
+        staff_name: staffRecord.name || userName || 'Support Worker',
+        staff_role: staffRecord.role || userRole || 'Support Worker',
         facility_id: shift.facilityId,
-        start_time: shift.startTime,
-        end_time: shift.endTime,
+        facility_name: 'Parramatta - Maxlife Care',
+        shift_date: shiftDate,
+        start_time: startTime,
+        end_time: endTime,
+        shift_type: shiftType,
+        actual_start_time: shift.startTime,
+        clocked_in_by: staffRecord.id,
         status: shift.status,
         handover_notes: shift.handoverNotes
       })
@@ -502,16 +591,18 @@ export class SupabaseService {
       .single()
 
     if (error) {
-      console.error('Error creating shift:', error)
+      console.error('❌ Supabase shift creation error:', error)
       throw error
     }
 
+    console.log('✅ Shift created in Supabase:', data.id)
+
     return {
       id: data.id,
-      staffId: data.staff_id || '',
+      staffId: shift.staffId, // Return original user ID for UI consistency
       facilityId: data.facility_id || '',
-      startTime: data.start_time,
-      endTime: data.end_time || '',
+      startTime: data.actual_start_time || data.start_time,
+      endTime: data.actual_end_time || data.end_time,
       handoverNotes: data.handover_notes || undefined,
       status: data.status as any
     }
@@ -519,6 +610,14 @@ export class SupabaseService {
 
   static async updateShift(shiftId: string, updates: Partial<Shift>): Promise<void> {
     if (!this.isAvailable()) return
+
+    // Validate shift ID is a proper UUID before querying
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(shiftId)) {
+      // Silent return for demo/local shift IDs
+      console.log('[SupabaseService] Skipping updateShift for non-UUID shift ID:', shiftId)
+      return
+    }
 
     const updateData: any = {}
     if (updates.endTime !== undefined) updateData.end_time = updates.endTime
@@ -538,6 +637,14 @@ export class SupabaseService {
 
   static async endShift(shiftId: string, handoverNotes?: string): Promise<void> {
     if (!this.isAvailable()) return
+
+    // Validate shift ID is a proper UUID before querying
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(shiftId)) {
+      // Silent return for demo/local shift IDs (e.g., "clock-user123")
+      console.log('[SupabaseService] Skipping endShift for non-UUID shift ID:', shiftId)
+      return
+    }
 
     // First check if shift exists
     const { data: existingShift, error: fetchError} = await supabase!
@@ -568,7 +675,7 @@ export class SupabaseService {
       .from('shifts')
       .update({
         status: 'completed',
-        end_time: new Date().toISOString(),
+        actual_end_time: new Date().toISOString(),
         handover_notes: handoverNotes
       })
       .eq('id', shiftId)
@@ -664,55 +771,18 @@ export class SupabaseService {
   }
 
   /**
-   * Clock in to a shift
-   */
-  static async clockIn(shiftId: string, userId: string) {
-    if (!this.isAvailable()) return
-
-    const { error } = await supabase!
-      .from('shifts')
-      .update({
-        status: 'active',
-        actual_start_time: new Date().toISOString(),
-        clocked_in_by: userId
-      })
-      .eq('id', shiftId)
-
-    if (error) {
-      console.error('Error clocking in:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Clock out from a shift
-   */
-  static async clockOut(shiftId: string, userId: string, handoverNotes?: string, criticalInfo?: string[]) {
-    if (!this.isAvailable()) return
-
-    const { error } = await supabase!
-      .from('shifts')
-      .update({
-        status: 'completed',
-        actual_end_time: new Date().toISOString(),
-        clocked_out_by: userId,
-        handover_notes: handoverNotes,
-        handover_critical_info: criticalInfo,
-        handover_completed_at: new Date().toISOString()
-      })
-      .eq('id', shiftId)
-
-    if (error) {
-      console.error('Error clocking out:', error)
-      throw error
-    }
-  }
-
-  /**
    * Update shift handover notes
    */
   static async updateShiftHandover(shiftId: string, handoverNotes: string, criticalInfo?: string[]) {
     if (!this.isAvailable()) return
+
+    // Validate shift ID is a proper UUID before querying
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(shiftId)) {
+      // Silent return for demo/local shift IDs
+      console.log('[SupabaseService] Skipping updateShiftHandover for non-UUID shift ID:', shiftId)
+      return
+    }
 
     const { error } = await supabase!
       .from('shifts')
@@ -778,6 +848,14 @@ export class SupabaseService {
    */
   static async cancelShift(shiftId: string) {
     if (!this.isAvailable()) return
+
+    // Validate shift ID is a proper UUID before querying
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(shiftId)) {
+      // Silent return for demo/local shift IDs
+      console.log('[SupabaseService] Skipping cancelShift for non-UUID shift ID:', shiftId)
+      return
+    }
 
     const { error } = await supabase!
       .from('shifts')
@@ -1260,5 +1338,712 @@ export class SupabaseService {
       pharmacyResponse: md.pharmacy_response || undefined,
       createdAt: md.created_at
     }))
+  }
+
+  // ===================================================================
+  // Simple User Clock Status Methods
+  // ===================================================================
+
+  /**
+   * Get user's current clock status
+   */
+  static async getClockStatus(userId: string): Promise<{ isClockedIn: boolean; clockInTime: string | null } | null> {
+    if (!this.isAvailable()) return null
+
+    const { data, error } = await supabase!
+      .from('user_clock_status')
+      .select('is_clocked_in, clock_in_time')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error fetching clock status:', error)
+      return null
+    }
+
+    if (!data) {
+      return { isClockedIn: false, clockInTime: null }
+    }
+
+    return {
+      isClockedIn: data.is_clocked_in,
+      clockInTime: data.clock_in_time
+    }
+  }
+
+  /**
+   * Clock in a user
+   */
+  static async clockIn(userId: string): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    const now = new Date().toISOString()
+
+    // Use upsert to either create or update the record
+    const { error } = await supabase!
+      .from('user_clock_status')
+      .upsert({
+        user_id: userId,
+        is_clocked_in: true,
+        clock_in_time: now,
+        clock_out_time: null
+      }, {
+        onConflict: 'user_id'
+      })
+
+    if (error) {
+      console.error('Error clocking in:', error)
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Clock out a user
+   */
+  static async clockOut(userId: string): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    const now = new Date().toISOString()
+
+    const { error } = await supabase!
+      .from('user_clock_status')
+      .update({
+        is_clocked_in: false,
+        clock_out_time: now
+      })
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('Error clocking out:', error)
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Save shift handover notes
+   */
+  static async saveShiftHandoverNotes(
+    userId: string,
+    clockInTime: string,
+    clockOutTime: string,
+    durationHours: number,
+    breakTimeSeconds: number,
+    handoverNotes: string,
+    progressNotes: string | null
+  ): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    const shiftDate = new Date(clockInTime).toISOString().split('T')[0]
+
+    const { error } = await supabase!
+      .from('shift_handover_notes')
+      .insert({
+        user_id: userId,
+        shift_date: shiftDate,
+        clock_in_time: clockInTime,
+        clock_out_time: clockOutTime,
+        duration_hours: durationHours,
+        break_time_seconds: breakTimeSeconds,
+        handover_notes: handoverNotes,
+        progress_notes: progressNotes
+      })
+
+    if (error) {
+      console.error('Error saving shift handover notes:', error)
+      return false
+    }
+
+    return true
+  }
+
+  // ===========================
+  // Billing & Invoice Methods
+  // ===========================
+
+  /**
+   * Get all billing records for a facility
+   */
+  static async getBillingRecords(facilityId?: string): Promise<BillingRecord[]> {
+    if (!this.isAvailable()) return []
+
+    let query = supabase!
+      .from('billing_records')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (facilityId) {
+      query = query.eq('facility_id', facilityId)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching billing records:', error)
+      return []
+    }
+
+    return data.map(record => ({
+      id: record.id,
+      billingId: record.billing_id,
+      reportId: record.report_id,
+      reportType: record.report_type as 'incident' | 'abc' | 'combined',
+      participantId: record.participant_id,
+      participantName: record.participant_name,
+      facilityId: record.facility_id,
+      dateOfService: record.date_of_service,
+      amount: record.amount,
+      serviceCode: record.service_code || undefined,
+      description: record.description,
+      status: record.status as 'pending' | 'submitted' | 'approved' | 'paid' | 'disputed' | 'cancelled',
+      submittedAt: record.submitted_at || undefined,
+      submittedBy: record.submitted_by || undefined,
+      submittedTo: record.submitted_to || undefined,
+      approvedAt: record.approved_at || undefined,
+      approvedBy: record.approved_by || undefined,
+      paidAt: record.paid_at || undefined,
+      notes: record.notes || undefined,
+      invoiceNumber: record.invoice_number || undefined,
+      paymentReference: record.payment_reference || undefined,
+      createdAt: record.created_at,
+      updatedAt: record.updated_at
+    }))
+  }
+
+  /**
+   * Create a new billing record
+   */
+  static async createBillingRecord(billingRecord: Omit<BillingRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
+    if (!this.isAvailable()) return null
+
+    const { data, error } = await supabase!
+      .from('billing_records')
+      .insert({
+        billing_id: billingRecord.billingId,
+        report_id: billingRecord.reportId,
+        report_type: billingRecord.reportType,
+        participant_id: billingRecord.participantId,
+        participant_name: billingRecord.participantName,
+        facility_id: billingRecord.facilityId,
+        date_of_service: billingRecord.dateOfService,
+        amount: billingRecord.amount,
+        service_code: billingRecord.serviceCode,
+        description: billingRecord.description,
+        status: billingRecord.status
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('Error creating billing record:', error)
+      return null
+    }
+
+    return data.id
+  }
+
+  /**
+   * Update billing record status
+   */
+  static async updateBillingRecordStatus(
+    recordId: string,
+    status: 'pending' | 'submitted' | 'approved' | 'paid' | 'disputed' | 'cancelled',
+    additionalData?: {
+      submittedAt?: string
+      submittedBy?: string
+      approvedAt?: string
+      approvedBy?: string
+      paidAt?: string
+      invoiceNumber?: string
+      paymentReference?: string
+    }
+  ): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    }
+
+    if (additionalData) {
+      if (additionalData.submittedAt) updateData.submitted_at = additionalData.submittedAt
+      if (additionalData.submittedBy) updateData.submitted_by = additionalData.submittedBy
+      if (additionalData.approvedAt) updateData.approved_at = additionalData.approvedAt
+      if (additionalData.approvedBy) updateData.approved_by = additionalData.approvedBy
+      if (additionalData.paidAt) updateData.paid_at = additionalData.paidAt
+      if (additionalData.invoiceNumber) updateData.invoice_number = additionalData.invoiceNumber
+      if (additionalData.paymentReference) updateData.payment_reference = additionalData.paymentReference
+    }
+
+    const { error } = await supabase!
+      .from('billing_records')
+      .update(updateData)
+      .eq('id', recordId)
+
+    if (error) {
+      console.error('Error updating billing record:', error)
+      return false
+    }
+
+    return true
+  }
+
+  // ===========================
+  // Report Escalation Methods
+  // ===========================
+
+  /**
+   * Get all report escalations for a facility
+   */
+  static async getReportEscalations(facilityId?: string): Promise<ReportEscalation[]> {
+    if (!this.isAvailable()) return []
+
+    let query = supabase!
+      .from('report_escalations')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (facilityId) {
+      query = query.eq('facility_id', facilityId)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching report escalations:', error)
+      return []
+    }
+
+    return data.map(escalation => ({
+      id: escalation.id,
+      reportId: escalation.report_id,
+      reportType: escalation.report_type as 'incident' | 'abc',
+      participantId: escalation.participant_id,
+      participantName: escalation.participant_name,
+      facilityId: escalation.facility_id,
+      currentStage: escalation.current_stage,
+      priority: escalation.priority as 'low' | 'medium' | 'high' | 'critical',
+      assignedTo: escalation.assigned_to || undefined,
+      assignedToName: escalation.assigned_to_name || undefined,
+      dueDate: escalation.due_date || undefined,
+      completedStages: escalation.completed_stages || [],
+      timeline: escalation.timeline || [],
+      status: escalation.status as 'in_progress' | 'completed' | 'escalated' | 'on_hold',
+      createdAt: escalation.created_at,
+      updatedAt: escalation.updated_at
+    }))
+  }
+
+  /**
+   * Create a new report escalation
+   */
+  static async createReportEscalation(escalation: Omit<ReportEscalation, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
+    if (!this.isAvailable()) return null
+
+    const { data, error } = await supabase!
+      .from('report_escalations')
+      .insert({
+        report_id: escalation.reportId,
+        report_type: escalation.reportType,
+        participant_id: escalation.participantId,
+        participant_name: escalation.participantName,
+        facility_id: escalation.facilityId,
+        current_stage: escalation.currentStage,
+        priority: escalation.priority,
+        assigned_to: escalation.assignedTo,
+        assigned_to_name: escalation.assignedToName,
+        due_date: escalation.dueDate,
+        completed_stages: escalation.completedStages,
+        timeline: escalation.timeline,
+        status: escalation.status
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('Error creating report escalation:', error)
+      return null
+    }
+
+    return data.id
+  }
+
+  /**
+   * Update report escalation stage
+   */
+  static async updateEscalationStage(
+    escalationId: string,
+    currentStage: string,
+    completedStage: CompletedStage,
+    status?: 'in_progress' | 'completed' | 'escalated' | 'on_hold'
+  ): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    // First fetch the current escalation to get existing data
+    const { data: currentData, error: fetchError } = await supabase!
+      .from('report_escalations')
+      .select('completed_stages')
+      .eq('id', escalationId)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching current escalation:', fetchError)
+      return false
+    }
+
+    const completedStages = [...(currentData.completed_stages || []), completedStage]
+
+    const updateData: any = {
+      current_stage: currentStage,
+      completed_stages: completedStages,
+      updated_at: new Date().toISOString()
+    }
+
+    if (status) {
+      updateData.status = status
+    }
+
+    const { error } = await supabase!
+      .from('report_escalations')
+      .update(updateData)
+      .eq('id', escalationId)
+
+    if (error) {
+      console.error('Error updating escalation stage:', error)
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Add event to escalation timeline
+   */
+  static async addEscalationEvent(
+    escalationId: string,
+    event: EscalationEvent
+  ): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    // First fetch the current timeline
+    const { data: currentData, error: fetchError } = await supabase!
+      .from('report_escalations')
+      .select('timeline')
+      .eq('id', escalationId)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching current timeline:', fetchError)
+      return false
+    }
+
+    const timeline = [...(currentData.timeline || []), event]
+
+    const { error } = await supabase!
+      .from('report_escalations')
+      .update({
+        timeline,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', escalationId)
+
+    if (error) {
+      console.error('Error adding escalation event:', error)
+      return false
+    }
+
+    return true
+  }
+
+  // ===========================
+  // Document Library Methods
+  // ===========================
+
+  /**
+   * Get all documents for a facility
+   */
+  static async getDocuments(facilityId?: string, category?: string): Promise<Document[]> {
+    if (!this.isAvailable()) return []
+
+    let query = supabase!
+      .from('documents')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (facilityId) {
+      query = query.eq('facility_id', facilityId)
+    }
+
+    if (category) {
+      query = query.eq('category', category)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching documents:', error)
+      return []
+    }
+
+    return data.map(doc => ({
+      id: doc.id,
+      title: doc.title,
+      category: doc.category as any,
+      description: doc.description || undefined,
+      fileUrl: doc.file_url,
+      fileName: doc.file_name || doc.title,
+      fileType: doc.file_type,
+      fileSize: doc.file_size,
+      uploadedBy: doc.uploaded_by,
+      uploadedByName: doc.uploaded_by_name || 'Unknown',
+      uploadedAt: doc.uploaded_at,
+      version: doc.version || '1.0',
+      tags: doc.tags || [],
+      requiresAcknowledgment: doc.requires_acknowledgment,
+      acknowledgedBy: doc.acknowledged_by || [],
+      expiryDate: doc.expiry_date || undefined,
+      facilityId: doc.facility_id || undefined,
+      accessCount: doc.access_count || 0,
+      isArchived: doc.is_archived || false,
+      lastAccessedAt: doc.last_accessed_at || undefined,
+      createdAt: doc.created_at,
+      updatedAt: doc.updated_at
+    }))
+  }
+
+  /**
+   * Upload a new document
+   */
+  static async uploadDocument(document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
+    if (!this.isAvailable()) return null
+
+    const { data, error } = await supabase!
+      .from('documents')
+      .insert({
+        title: document.title,
+        category: document.category,
+        description: document.description,
+        file_url: document.fileUrl,
+        file_name: document.fileName,
+        file_type: document.fileType,
+        file_size: document.fileSize,
+        uploaded_by: document.uploadedBy,
+        uploaded_by_name: document.uploadedByName,
+        uploaded_at: document.uploadedAt,
+        version: document.version,
+        tags: document.tags,
+        requires_acknowledgment: document.requiresAcknowledgment,
+        acknowledged_by: document.acknowledgedBy,
+        expiry_date: document.expiryDate,
+        facility_id: document.facilityId,
+        access_count: document.accessCount || 0,
+        is_archived: document.isArchived || false
+      })
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('Error uploading document:', error)
+      return null
+    }
+
+    return data.id
+  }
+
+  /**
+   * Acknowledge a document
+   */
+  static async acknowledgeDocument(documentId: string, userId: string, userName: string): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    // First fetch the current document to get existing acknowledgments
+    const { data: currentDoc, error: fetchError } = await supabase!
+      .from('documents')
+      .select('acknowledged_by')
+      .eq('id', documentId)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching document:', fetchError)
+      return false
+    }
+
+    const acknowledgedBy = [...(currentDoc.acknowledged_by || []), {
+      userId,
+      userName,
+      acknowledgedAt: new Date().toISOString()
+    }]
+
+    const { error } = await supabase!
+      .from('documents')
+      .update({
+        acknowledged_by: acknowledgedBy,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', documentId)
+
+    if (error) {
+      console.error('Error acknowledging document:', error)
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Delete a document
+   */
+  static async deleteDocument(documentId: string): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    const { error } = await supabase!
+      .from('documents')
+      .delete()
+      .eq('id', documentId)
+
+    if (error) {
+      console.error('Error deleting document:', error)
+      return false
+    }
+
+    return true
+  }
+
+  // ===========================
+  // Analytics Methods
+  // ===========================
+
+  /**
+   * Get analytics summary for a period
+   */
+  static async getAnalyticsSummary(
+    facilityId?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<AnalyticsSummary | null> {
+    if (!this.isAvailable()) return null
+
+    // This would be a complex aggregation query in production
+    // For now, returning null to use mock data in the frontend
+    // TODO: Implement proper analytics aggregation
+    return null
+  }
+
+  /**
+   * Get participant statistics
+   */
+  static async getParticipantStats(
+    facilityId?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ParticipantStats[]> {
+    if (!this.isAvailable()) return []
+
+    // This would aggregate incident data by participant
+    // For now, returning empty to use mock data in the frontend
+    // TODO: Implement proper participant statistics aggregation
+    return []
+  }
+
+  /**
+   * Get staff performance statistics
+   */
+  static async getStaffStats(
+    facilityId?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<StaffStats[]> {
+    if (!this.isAvailable()) return []
+
+    // This would aggregate report and incident data by staff
+    // For now, returning empty to use mock data in the frontend
+    // TODO: Implement proper staff statistics aggregation
+    return []
+  }
+
+  // ===========================
+  // Audit Trail Methods
+  // ===========================
+
+  /**
+   * Get audit logs
+   */
+  static async getAuditLogs(
+    entityType?: string,
+    entityId?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<AuditLog[]> {
+    if (!this.isAvailable()) return []
+
+    let query = supabase!
+      .from('audit_logs')
+      .select('*')
+      .order('timestamp', { ascending: false })
+
+    if (entityType) {
+      query = query.eq('entity_type', entityType)
+    }
+
+    if (entityId) {
+      query = query.eq('entity_id', entityId)
+    }
+
+    if (startDate) {
+      query = query.gte('timestamp', startDate)
+    }
+
+    if (endDate) {
+      query = query.lte('timestamp', endDate)
+    }
+
+    const { data, error } = await query.limit(100)
+
+    if (error) {
+      console.error('Error fetching audit logs:', error)
+      return []
+    }
+
+    return data.map(log => ({
+      id: log.id,
+      entityType: log.entity_type,
+      entityId: log.entity_id,
+      action: log.action,
+      performedBy: log.performed_by,
+      performedByName: log.performed_by_name || undefined,
+      timestamp: log.timestamp,
+      changes: log.changes || undefined,
+      metadata: log.metadata || undefined
+    }))
+  }
+
+  /**
+   * Create an audit log entry
+   */
+  static async createAuditLog(log: Omit<AuditLog, 'id'>): Promise<boolean> {
+    if (!this.isAvailable()) return false
+
+    const { error } = await supabase!
+      .from('audit_logs')
+      .insert({
+        entity_type: log.entityType,
+        entity_id: log.entityId,
+        action: log.action,
+        performed_by: log.performedBy,
+        performed_by_name: log.performedByName,
+        timestamp: log.timestamp,
+        changes: log.changes,
+        metadata: log.metadata
+      })
+
+    if (error) {
+      console.error('Error creating audit log:', error)
+      return false
+    }
+
+    return true
   }
 }

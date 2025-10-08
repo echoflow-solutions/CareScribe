@@ -8,10 +8,11 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Avatar } from '@/components/ui/avatar'
 import { useToast } from '@/components/hooks/use-toast'
 import { useStore } from '@/lib/store'
 import { DataService } from '@/lib/data/service'
-import { ArrowLeft, LogIn, Sparkles, User, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, LogIn, Sparkles, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -25,7 +26,6 @@ export default function LoginPage() {
 
   const demoAccounts = [
     { role: "Support Worker", email: "bernard.adjei@maxlifecare.com.au", description: "Frontline staff view" },
-    { role: "Support Worker", email: "akua@maxlifecare.com.au", description: "Frontline staff view" },
     { role: "Team Leader", email: "tom.anderson@maxlifecare.com.au", description: "Supervisory dashboard" },
     { role: "Clinical Manager", email: "dr.kim@maxlifecare.com.au", description: "Clinical insights" },
     { role: "Area Manager", email: "lisa.park@maxlifecare.com.au", description: "Regional oversight" }
@@ -52,38 +52,8 @@ export default function LoginPage() {
         const org = await DataService.getOrganization()
         if (org) setOrganization(org)
 
-        // Restore active shift if exists (for support workers)
-        if (user.role.level === 4) {
-          const activeShift = await DataService.getCurrentShift()
-          if (activeShift) {
-            // Validate the shift - make sure it's not expired or invalid
-            const endTime = new Date(activeShift.endTime)
-            const now = new Date()
-
-            if (endTime > now && activeShift.status === 'active') {
-              setCurrentShift(activeShift)
-              console.log('Restored active shift for', user.name, ':', activeShift)
-            } else {
-              console.log('Shift expired or inactive, clearing it')
-              setCurrentShift(null)
-              // Clear from database if it exists
-              if (activeShift.id) {
-                try {
-                  await DataService.endShift(activeShift.id)
-                } catch (error) {
-                  console.warn('Error ending expired shift:', error)
-                }
-              }
-            }
-          } else {
-            // No active shift found for this user - clear any existing shift in store
-            console.log('No active shift found for', user.name, '- clearing shift state')
-            setCurrentShift(null)
-          }
-        } else {
-          // Not a support worker - clear shift state
-          setCurrentShift(null)
-        }
+        // Clock status will be restored automatically by shift-start page if user is clocked in
+        // No need to restore it here
 
         toast({
           title: "Welcome back!",
@@ -150,7 +120,13 @@ export default function LoginPage() {
                     disabled={isLoading}
                   >
                     <div className="flex items-start gap-3 text-left">
-                      <User className="h-5 w-5 mt-1 flex-shrink-0" />
+                      <Avatar className="h-10 w-10 flex-shrink-0 border-2 border-gray-200">
+                        <img
+                          src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(account.role)}`}
+                          alt={account.role}
+                          className="h-full w-full rounded-full object-cover bg-gray-100"
+                        />
+                      </Avatar>
                       <div className="flex-1">
                         <div className="font-semibold">{account.role}</div>
                         <div className="text-xs text-muted-foreground">{account.description}</div>
