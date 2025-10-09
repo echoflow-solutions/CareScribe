@@ -106,7 +106,11 @@ export default function ReportsPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: subDays(new Date(), 30),
-    to: new Date()
+    to: (() => {
+      const endOfToday = new Date()
+      endOfToday.setHours(23, 59, 59, 999)
+      return endOfToday
+    })()
   })
   const [selectedReports, setSelectedReports] = useState<Set<string>>(new Set())
   const [showExportDialog, setShowExportDialog] = useState(false)
@@ -122,15 +126,76 @@ export default function ReportsPage() {
     hasPatternMatch: false
   })
 
-  useEffect(() => {
-    // Generate mock reports
-    const mockReports = generateReports()
-    setReports(mockReports)
-    setFilteredReports(mockReports)
-    setLoading(false)
-  }, [])
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const reportsPerPage = 10
 
   useEffect(() => {
+    loadReports()
+  }, [])
+
+  const loadReports = async () => {
+    try {
+      // Load reports from database
+      const incidents = await DataService.getIncidents()
+
+      // Transform incidents to Report format
+      const transformedReports: Report[] = incidents.map(incident => {
+        // Parse interventions if it's a JSON string
+        let interventions: string[] = []
+        try {
+          if (typeof incident.interventions === 'string') {
+            const parsed = JSON.parse(incident.interventions)
+            interventions = Array.isArray(parsed) ? parsed.map((i: any) => i.description || i) : []
+          } else if (Array.isArray(incident.interventions)) {
+            interventions = incident.interventions.map((i: any) => i.description || i)
+          }
+        } catch (e) {
+          console.warn('Failed to parse interventions:', e)
+          interventions = []
+        }
+
+        return {
+          id: incident.id,
+          incidentDate: new Date(incident.timestamp),
+          reportedDate: new Date(incident.timestamp),
+          participantName: incident.participantName || 'Unknown',
+          participantId: incident.participantId,
+          facilityName: incident.location || 'Unknown Facility',
+          reporterName: incident.staffName || 'Unknown',
+          reporterId: incident.staffId,
+          type: incident.type,
+          severity: incident.severity,
+          status: incident.status === 'draft' ? 'draft' :
+                  incident.status === 'submitted' ? 'submitted' :
+                  incident.status === 'reviewed' ? 'reviewed' : 'closed',
+          reportType: incident.reportType || 'incident',
+          description: incident.description,
+          antecedent: incident.antecedent,
+          behavior: incident.behavior,
+          consequence: incident.consequence,
+          interventions,
+          tags: []
+        }
+      })
+
+      setReports(transformedReports)
+      setFilteredReports(transformedReports)
+    } catch (error) {
+      console.error('Error loading reports:', error)
+      // Fallback to mock data if database fails
+      const mockReports = generateReports()
+      setReports(mockReports)
+      setFilteredReports(mockReports)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // Reset to first page when filters change
+    setCurrentPage(1)
+
     // Apply filters
     let filtered = reports
 
@@ -769,7 +834,9 @@ export default function ReportsPage() {
                         </td>
                       </tr>
                     ) : (
-                      filteredReports.slice(0, 10).map((report) => (
+                      filteredReports
+                        .slice((currentPage - 1) * reportsPerPage, currentPage * reportsPerPage)
+                        .map((report) => (
                         <tr key={report.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <Checkbox
@@ -848,14 +915,28 @@ export default function ReportsPage() {
               </div>
               
               {/* Pagination */}
-              {filteredReports.length > 10 && (
+              {filteredReports.length > reportsPerPage && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
                   <p className="text-sm text-gray-500">
-                    Showing 1 to 10 of {filteredReports.length} reports
+                    Showing {((currentPage - 1) * reportsPerPage) + 1} to {Math.min(currentPage * reportsPerPage, filteredReports.length)} of {filteredReports.length} reports
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">Previous</Button>
-                    <Button variant="outline" size="sm">Next</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= Math.ceil(filteredReports.length / reportsPerPage)}
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredReports.length / reportsPerPage), prev + 1))}
+                    >
+                      Next
+                    </Button>
                   </div>
                 </div>
               )}

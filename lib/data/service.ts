@@ -181,7 +181,8 @@ export class DataService {
   static async getIncidents(): Promise<Incident[]> {
     if (this.useSupabase()) {
       const currentUser = await this.getCurrentUser()
-      return await SupabaseService.getIncidents(currentUser?.facilityId)
+      // Pass both facilityId and userId for filtering
+      return await SupabaseService.getIncidents(currentUser?.facilityId, currentUser?.id)
     }
     return (await storage.get(STORAGE_KEYS.INCIDENTS)) || []
   }

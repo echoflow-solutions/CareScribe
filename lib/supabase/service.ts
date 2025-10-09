@@ -356,7 +356,7 @@ export class SupabaseService {
   }
 
   // Incident methods
-  static async getIncidents(facilityId?: string): Promise<Incident[]> {
+  static async getIncidents(facilityId?: string, userId?: string): Promise<Incident[]> {
     if (!this.isAvailable()) return []
 
     // Simplified query without joins to avoid relationship errors
@@ -364,10 +364,17 @@ export class SupabaseService {
       .from('incidents')
       .select('*')
 
-    // Only filter by facility_id if it's a valid UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    // Filter by staff_id (userId) to show user-specific reports
+    if (userId && uuidRegex.test(userId)) {
+      query = query.eq('staff_id', userId)
+    }
+
+    // Also filter by facility_id if provided
+    // Include incidents with null facility_id OR matching facility_id
     if (facilityId && uuidRegex.test(facilityId)) {
-      query = query.eq('facility_id', facilityId)
+      query = query.or(`facility_id.eq.${facilityId},facility_id.is.null`)
     }
 
     const { data, error } = await query.order('created_at', { ascending: false })
@@ -403,7 +410,8 @@ export class SupabaseService {
     return data.map(i => ({
       id: i.id,
       participantId: i.participant_id || '',
-      participantName: participantsMap.get(i.participant_id) || 'Unknown',
+      // Priority: 1) Use stored participant_name, 2) Look up from participants table, 3) Default to 'Unknown'
+      participantName: i.participant_name || participantsMap.get(i.participant_id) || 'Unknown',
       type: i.type as any,
       severity: i.severity as any,
       timestamp: i.created_at,

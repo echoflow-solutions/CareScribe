@@ -51,6 +51,13 @@ interface AIUnderstanding {
 // AI conversation state management
 const MAX_CONVERSATION_TURNS = 10 // Prevent infinite conversations
 
+// Helper to generate unique message IDs
+let messageCounter = 0
+const generateMessageId = (role: string) => {
+  messageCounter++
+  return `${role}-${Date.now()}-${messageCounter}-${Math.random().toString(36).substring(2, 9)}`
+}
+
 function ConversationalReportContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -97,19 +104,19 @@ function ConversationalReportContent() {
     if (initialDescription) {
       // Add user's initial description
       const userMessage: ConversationMessage = {
-        id: '1',
+        id: generateMessageId('user'),
         role: 'user',
         content: initialDescription,
         timestamp: new Date()
       }
       setMessages([userMessage])
-      
+
       // Generate AI response
       setIsProcessing(true)
       try {
         const aiResponse = await AIService.generateQuickResponse(initialDescription)
         const assistantMessage: ConversationMessage = {
-          id: '2',
+          id: generateMessageId('assistant'),
           role: 'assistant',
           content: aiResponse,
           timestamp: new Date()
@@ -119,7 +126,7 @@ function ConversationalReportContent() {
         console.error('AI response error:', error)
         // Fallback message
         const fallbackMessage: ConversationMessage = {
-          id: '2',
+          id: generateMessageId('assistant-fallback'),
           role: 'assistant',
           content: 'I understand there was an incident. Can you tell me if everyone involved is safe and uninjured?',
           timestamp: new Date()
@@ -166,7 +173,7 @@ function ConversationalReportContent() {
   const processUserResponse = async (response: string) => {
     // Add user message
     const userMessage: ConversationMessage = {
-      id: Date.now().toString(),
+      id: generateMessageId('user'),
       role: 'user',
       content: response,
       timestamp: new Date()
@@ -178,12 +185,12 @@ function ConversationalReportContent() {
     updateReportText(response)
 
     // Check if we should generate the report
-    if (conversationTurns >= MAX_CONVERSATION_TURNS - 1 || 
+    if (conversationTurns >= MAX_CONVERSATION_TURNS - 1 ||
         response.toLowerCase().includes('that\'s all') ||
         response.toLowerCase().includes('nothing else')) {
       setIsProcessing(true)
       const finalMessage: ConversationMessage = {
-        id: Date.now().toString() + '-final',
+        id: generateMessageId('assistant-final'),
         role: 'assistant',
         content: 'Thank you for providing all the details. I\'m now generating a comprehensive incident report for your review.',
         timestamp: new Date()
@@ -203,24 +210,24 @@ function ConversationalReportContent() {
         content: m.content
       }))
       aiMessages.push({ role: 'user', content: response })
-      
+
       const aiResponse = await AIService.generateConversationalResponse(aiMessages, response)
-      
+
       const assistantMessage: ConversationMessage = {
-        id: Date.now().toString() + '-ai',
+        id: generateMessageId('assistant'),
         role: 'assistant',
         content: aiResponse,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, assistantMessage])
-      
+
       // Extract understanding from AI response
       updateAIUnderstanding(response, aiResponse)
     } catch (error) {
       console.error('AI response error:', error)
       // Fallback to ask for more details
       const fallbackMessage: ConversationMessage = {
-        id: Date.now().toString() + '-fallback',
+        id: generateMessageId('assistant-fallback'),
         role: 'assistant',
         content: 'Can you provide more details about what happened?',
         timestamp: new Date()

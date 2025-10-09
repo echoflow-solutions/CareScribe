@@ -94,44 +94,132 @@ export class AIService {
     messages: ConversationMessage[],
     provider: any
   ): Promise<string> {
-    const response = await fetch('/api/ai/openai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages,
-        model: provider.model,
-      }),
-    })
-    
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to generate response')
+    try {
+      const response = await fetch('/api/ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          model: provider.model,
+        }),
+      })
+
+      if (!response.ok) {
+        // Try to parse error response, but handle non-JSON responses
+        let errorMessage = 'Failed to generate response'
+        try {
+          const error = await response.json()
+          errorMessage = error.error || errorMessage
+        } catch (parseError) {
+          // If we can't parse the error, try to get it as text
+          try {
+            const errorText = await response.text()
+            if (errorText) {
+              errorMessage = `Server error: ${errorText.substring(0, 100)}`
+            }
+          } catch (textError) {
+            // Fall back to status-based error
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`
+          }
+        }
+
+        console.error('[AIService] OpenAI call failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage
+        })
+
+        throw new Error(errorMessage)
+      }
+
+      // Parse successful response
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error('[AIService] Failed to parse OpenAI response:', parseError)
+        throw new Error('Invalid response format from AI service')
+      }
+
+      if (!data.content) {
+        console.error('[AIService] No content in OpenAI response:', data)
+        throw new Error('No response content received from AI service')
+      }
+
+      return data.content
+    } catch (error) {
+      // Re-throw with more context if it's a network error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error: Unable to connect to AI service. Please check your connection.')
+      }
+      throw error
     }
-    
-    const data = await response.json()
-    return data.content
   }
   
   private static async callAnthropic(
     messages: ConversationMessage[],
     provider: any
   ): Promise<string> {
-    const response = await fetch('/api/ai/anthropic', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages,
-        model: provider.model,
-      }),
-    })
-    
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to generate response')
+    try {
+      const response = await fetch('/api/ai/anthropic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages,
+          model: provider.model,
+        }),
+      })
+
+      if (!response.ok) {
+        // Try to parse error response, but handle non-JSON responses
+        let errorMessage = 'Failed to generate response'
+        try {
+          const error = await response.json()
+          errorMessage = error.error || errorMessage
+        } catch (parseError) {
+          // If we can't parse the error, try to get it as text
+          try {
+            const errorText = await response.text()
+            if (errorText) {
+              errorMessage = `Server error: ${errorText.substring(0, 100)}`
+            }
+          } catch (textError) {
+            // Fall back to status-based error
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`
+          }
+        }
+
+        console.error('[AIService] Anthropic call failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage
+        })
+
+        throw new Error(errorMessage)
+      }
+
+      // Parse successful response
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error('[AIService] Failed to parse Anthropic response:', parseError)
+        throw new Error('Invalid response format from AI service')
+      }
+
+      if (!data.content) {
+        console.error('[AIService] No content in Anthropic response:', data)
+        throw new Error('No response content received from AI service')
+      }
+
+      return data.content
+    } catch (error) {
+      // Re-throw with more context if it's a network error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error: Unable to connect to AI service. Please check your connection.')
+      }
+      throw error
     }
-    
-    const data = await response.json()
-    return data.content
   }
   
   private static extractUnderstanding(

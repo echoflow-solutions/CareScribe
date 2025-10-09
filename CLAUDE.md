@@ -1,6 +1,18 @@
-# Server Verification Instructions for AI Assistant
+# Claude AI Assistant Instructions for CareScribe
 
-## Important Rule
+## 🔴 CRITICAL: Database Status
+
+**BEFORE doing ANYTHING with the database, READ `DATABASE_STATUS.md` first!**
+
+- ✅ ALL database tables already exist in Supabase
+- ✅ Migrations have already been run
+- ❌ DO NOT suggest creating tables that already exist
+- ⚠️ If database errors occur, check PERMISSIONS first, not table existence
+- 📖 See `DATABASE_STATUS.md` for complete database documentation
+
+## Server Verification Instructions
+
+### Important Rule
 
 Never tell the user that a server is ready just because you ran the start command. You must always verify that the server is actually working before saying it's ready to test.
 
