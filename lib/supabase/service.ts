@@ -407,27 +407,43 @@ export class SupabaseService {
       staff?.forEach(s => staffMap.set(s.id, s.name))
     }
 
-    return data.map(i => ({
-      id: i.id,
-      participantId: i.participant_id || '',
-      // Priority: 1) Use stored participant_name, 2) Look up from participants table, 3) Default to 'Unknown'
-      participantName: i.participant_name || participantsMap.get(i.participant_id) || 'Unknown',
-      type: i.type as any,
-      severity: i.severity as any,
-      timestamp: i.created_at,
-      location: i.location || '',
-      staffId: i.staff_id || '',
-      staffName: staffMap.get(i.staff_id) || 'Unknown',
-      description: i.description || '',
-      antecedent: i.antecedent || '',
-      behavior: i.behavior || '',
-      consequence: i.consequence || '',
-      interventions: i.interventions || [],
-      outcomes: i.outcomes || [],
-      photos: i.photos || [],
-      reportType: i.report_type as any,
-      status: i.status as any
-    }))
+    return data.map(i => {
+      // Construct participant name from first and last name
+      let participantName = 'Unknown'
+      if (i.participant_first_name && i.participant_last_name) {
+        participantName = `${i.participant_first_name} ${i.participant_last_name}`
+      } else if (i.participant_first_name) {
+        participantName = i.participant_first_name
+      } else if (i.participant_last_name) {
+        participantName = i.participant_last_name
+      } else if (i.participant_id) {
+        // Fallback to participants table lookup
+        participantName = participantsMap.get(i.participant_id) || 'Unknown'
+      }
+
+      return {
+        id: i.id,
+        participantId: i.participant_id || '',
+        participantName: participantName,
+        participant_first_name: i.participant_first_name || '',
+        participant_last_name: i.participant_last_name || '',
+        type: i.type as any,
+        severity: i.severity as any,
+        timestamp: i.created_at,
+        location: i.location || '',
+        staffId: i.staff_id || '',
+        staffName: staffMap.get(i.staff_id) || 'Unknown',
+        description: i.description || '',
+        antecedent: i.antecedent || '',
+        behavior: i.behavior || '',
+        consequence: i.consequence || '',
+        interventions: i.interventions || [],
+        outcomes: i.outcomes || [],
+        photos: i.photos || [],
+        reportType: i.report_type as any,
+        status: i.status as any
+      }
+    })
   }
 
   static async createIncident(incident: Omit<Incident, 'id'>): Promise<void> {

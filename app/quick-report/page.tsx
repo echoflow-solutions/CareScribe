@@ -741,9 +741,11 @@ EXPANSION EXAMPLES:
 
 JSON STRUCTURE - 2-4 sentences per field:
 
+CRITICAL: Look for participant's name ANYWHERE in conversation, not just when explicitly asked. Check ALL answers for any mention of a name (first name, last name, full name). If you find ANY name mentioned, extract it.
+
 {
-  "participant_first_name": "exact first name from conversation",
-  "participant_last_name": "exact last name or infer professional placeholder",
+  "participant_first_name": "Extract EXACT first name if mentioned ANYWHERE in conversation. Check every answer carefully.",
+  "participant_last_name": "Extract EXACT last name if mentioned ANYWHERE in conversation. Check every answer carefully.",
   "incident_date": "${currentDate}",
   "incident_time": "specific time from conversation or '${defaultTime}'",
 

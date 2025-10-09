@@ -16,7 +16,9 @@ export async function POST(request: NextRequest) {
       user_id,
       facility_id,
       participant_id,
-      participant_name, // Receive but don't use - database doesn't have this column
+      participant_name,
+      participant_first_name,
+      participant_last_name,
       type,
       severity,
       location,
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prepare incident data - NOTE: Do not include participant_name as it doesn't exist in database
+    // Prepare incident data with participant names
     const incidentData: any = {
       staff_id: user_id,
       type: type || 'behavioral',
@@ -65,6 +67,14 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString()
     }
 
+    // Add participant names if provided
+    if (participant_first_name) {
+      incidentData.participant_first_name = participant_first_name
+    }
+    if (participant_last_name) {
+      incidentData.participant_last_name = participant_last_name
+    }
+
     // Add facility_id if provided
     if (facility_id) {
       incidentData.facility_id = facility_id
@@ -79,7 +89,8 @@ export async function POST(request: NextRequest) {
       staff_id: incidentData.staff_id,
       type: incidentData.type,
       severity: incidentData.severity,
-      participant_name_provided: participant_name || 'Not provided',
+      participant_first_name: incidentData.participant_first_name || 'Not provided',
+      participant_last_name: incidentData.participant_last_name || 'Not provided',
       has_participant_id: !!incidentData.participant_id,
       has_facility_id: !!incidentData.facility_id
     })

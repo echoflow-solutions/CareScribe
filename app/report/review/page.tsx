@@ -158,6 +158,8 @@ export default function ReportReviewPage() {
           facility_id: reportData.facility_id,
           participant_id: reportData.participant_id,
           participant_name: reportData.participant_full_name || `${reportData.participant_first_name} ${reportData.participant_last_name}`.trim(),
+          participant_first_name: reportData.participant_first_name,
+          participant_last_name: reportData.participant_last_name,
           type: reportData.type,
           severity: reportData.severity,
           location: reportData.location,

@@ -155,11 +155,16 @@ export default function ReportsPage() {
           interventions = []
         }
 
+        // Construct participant name from first and last name
+        const participantName = incident.participant_first_name && incident.participant_last_name
+          ? `${incident.participant_first_name} ${incident.participant_last_name}`
+          : incident.participant_first_name || incident.participant_last_name || 'Unknown'
+
         return {
           id: incident.id,
           incidentDate: new Date(incident.timestamp),
           reportedDate: new Date(incident.timestamp),
-          participantName: incident.participantName || 'Unknown',
+          participantName: participantName,
           participantId: incident.participantId,
           facilityName: incident.location || 'Unknown Facility',
           reporterName: incident.staffName || 'Unknown',

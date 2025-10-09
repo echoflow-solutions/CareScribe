@@ -234,6 +234,8 @@ export interface Incident {
   id: string
   participantId: string
   participantName: string
+  participant_first_name?: string
+  participant_last_name?: string
   type: 'behavioral' | 'medical' | 'property' | 'other'
   severity: 'low' | 'medium' | 'high'
   timestamp: string
