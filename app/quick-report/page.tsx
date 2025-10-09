@@ -697,6 +697,8 @@ export default function QuickReportPage() {
   }
 
   const handleGenerateReport = async () => {
+    if (!currentUser) return
+
     setIsGeneratingReport(true)
 
     try {
@@ -810,14 +812,13 @@ Remember: Expand brief statements with professional detail. Each field 2-4 sente
         console.log('[Report] Successfully parsed AI response')
       } catch (parseError) {
         console.error('[Report] Failed to parse AI response:', parseError)
+        const error = parseError as Error
         console.error('[Report] Parse error details:', {
-          name: parseError.name,
-          message: parseError.message,
-          position: parseError.message.match(/position (\d+)/)?.[1]
+          name: error.name,
+          message: error.message,
+          position: error.message.match(/position (\d+)/)?.[1]
         })
 
-        // Try to extract what we can from the raw content
-        const rawContent = aiData.content
         console.log('[Report] Attempting fallback extraction from raw content')
 
         // Fallback to basic extraction
@@ -1049,21 +1050,6 @@ Remember: Expand brief statements with professional detail. Each field 2-4 sente
 
   // Calculate total duration
   const totalDuration = audioSegments.reduce((sum, seg) => sum + seg.duration, 0) + currentSegmentDuration
-
-  // Helper function for rounded rectangles (browser compatible)
-  const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
-    ctx.beginPath()
-    ctx.moveTo(x + radius, y)
-    ctx.lineTo(x + width - radius, y)
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius)
-    ctx.lineTo(x + width, y + height - radius)
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height)
-    ctx.lineTo(x + radius, y + height)
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius)
-    ctx.lineTo(x, y + radius)
-    ctx.quadraticCurveTo(x, y, x + radius, y)
-    ctx.closePath()
-  }
 
   // Visualize audio - smooth and responsive
   const visualizeAudio = useCallback(() => {
